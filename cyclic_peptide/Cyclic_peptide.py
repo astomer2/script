@@ -111,7 +111,8 @@ def colabfold(sequences):
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-# python 解释器内核换成colabfold
+
+# python 解释器内核换成colabfold环境
     os.system('colabfold_batch  {}  {}  --amber --zip'.format(input_dir, output_dir))
 
 if __name__ == '__main__':
