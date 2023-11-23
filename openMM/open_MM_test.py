@@ -1,21 +1,11 @@
 from openmm.app import *
 from openmm import *
 from openmm.unit import *
+#from sys import stdout
 from simtk import unit as u
 
 
-def cala_minimize_energy(pdb_file: str, log_file: str, steps: int) -> None:
-    """
-    Minimizes the energy of the system.
-
-    Args:
-        pdb_file (str): The path to the PDB file.
-        log_file (str): The path to the log file.
-        steps (int): The number of steps to simulate.
-
-    Returns:
-        None
-    """
+def cala_minimize_energy(pdb_file, log_file, steps):
     pdb = PDBFile(pdb_file)
     forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
 
@@ -43,9 +33,12 @@ def cala_minimize_energy(pdb_file: str, log_file: str, steps: int) -> None:
     simulation.reporters.append(PDBReporter(output_file, 1000))
     simulation.reporters.append(StateDataReporter(log_file, 
                                                 1000, 
+                                                #step=True,
                                                 totalEnergy=True,
                                                 kineticEnergy=True,
-                                                potentialEnergy=True))
+                                                potentialEnergy=True, 
+                                                #temperature=True,
+                                                ))
 
     simulation.step(steps)
 
@@ -54,4 +47,4 @@ if __name__ == '__main__':
     log_file = '/mnt/sdc/lanwei/TLR2/energy.txt'
     output_file = '/mnt/sdc/lanwei/TLR2/output.pdb'
     steps = 1000
-    cala_minimize_energy(pdb_file, log_file, steps)
+    cala_minimize_energy('output.pdb', 'log.txt')
