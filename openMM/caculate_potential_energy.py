@@ -1,9 +1,29 @@
 import os
 import shutil
-from openmm.app import *
+from dataclasses import dataclass
+from typing import Sequence
+
+import numpy as np
 from openmm import *
+from openmm.app import *
 from openmm.unit import *
 from simtk import unit as u
+from tqdm import tqdm
+
+
+@dataclass
+class EnergyUnit:
+    complex_energy: float
+    protein_energy: float
+    peptide_energy: float
+    diff_energy: float
+
+
+@dataclass
+class Energy:
+    file_name: str
+    raw: EnergyUnit
+    minimized: EnergyUnit = None
 
 
 def copy_and_create_directory(pdb_path):
@@ -13,9 +33,7 @@ def copy_and_create_directory(pdb_path):
     """
     if pdb_path.endswith(".pdb"):
         file_path, file_name = os.path.split(pdb_path)
-        file_name, _ = os.path.splitext(
-            file_name
-        )  # 使用os.path.splitext获取文件名和扩展名
+        file_name, _ = os.path.splitext(file_name)  # 使用os.path.splitext获取文件名和扩展名
         workdir = os.path.join(file_path, file_name)
         os.makedirs(workdir, exist_ok=True)
         shutil.copy(pdb_path, workdir)
@@ -72,7 +90,7 @@ def write_pdb_chain(chains, workdir):
 def calculate_potential_energy(pdb_file):
     """
     计算PDB文件的势能
-    :param pdb_file:pdb文件的路径
+    :param pdb_file:
     """
 
     pdb = PDBFile(pdb_file)
@@ -96,40 +114,64 @@ def calculate_potential_energy(pdb_file):
     return potentialEnergy.value_in_unit(kilocalories_per_mole)
 
 
-def calculate_differnet_energy(complex_pdb ,protein, peptide):
+def calculate_differnet_energy(complex_pdb_file_path, protein_path, peptide_path):
     """
     计算多肽、蛋白、复合体以及差值的势能值,单位kcal/mol
-    :parm protein,peptide:生成的蛋白、多肽的路径
+
+    Args:
+        complex_pdb_file_path: 输入的复合体的pdb文件路径
+        protein_path, peptide_path: 临时生成的蛋白、多肽的路径
     """
-    energy = {}
-    file_name = complex_pdb.split("/")[-1].split(".")[0]
-    complex_energy = round(calculate_potential_energy(complex_pdb), 3)
-    protein_energy = round(calculate_potential_energy(protein), 3)
-    peptide_energy = round(calculate_potential_energy(peptide), 3)
+    file_name = complex_pdb_file_path.split("/")[-1].split(".")[0]
+    complex_energy = round(calculate_potential_energy(complex_pdb_file_path), 3)
+    protein_energy = round(calculate_potential_energy(protein_path), 3)
+    peptide_energy = round(calculate_potential_energy(peptide_path), 3)
     diff_energy = complex_energy - protein_energy - peptide_energy
-    energy[file_name] = {
-        "complex_energy": complex_energy,
-        "protein_energy": protein_energy,
-        "peptide_energy": peptide_energy,
-        "diff_energy": diff_energy,
-    }
+    energy = Energy(
+        file_name,
+        raw=EnergyUnit(complex_energy, protein_energy, peptide_energy, diff_energy),
+    )
     return energy
 
 
-def main(complex_pdb):
+def calc_complex_energy(complex_pdb: str):
     """
-    主函数
-    :param pdb: pdb文件的路径
-    {'WPIHHVT_monomer': {'complex_energy': -2081.3146995996653, 'protein_energy': -1946.171310162225, 'peptide_energy': -17.131506370996654, 'diff_energy': -118.01188306644377}}
+    Advice to rank the complex energy by raw diff_energy in output.
+
+    Args:
+        pdb: pdb文件的路径
+
+    Returns:
+        Energy(file_name='WPIHHVT_monomer', raw=EnergyUnit(complex_energy=-2081.293, protein_energy=-1946.171, peptide_energy=-17.132, diff_energy=-117.99000000000007), minimized=None)
+
     """
+    complex_pdb = str(complex_pdb)
     workdir = copy_and_create_directory(complex_pdb)
     chains = read_pdb_chain(workdir)
     protein, peptide = write_pdb_chain(chains, workdir)
     energy = calculate_differnet_energy(complex_pdb, protein, peptide)
     shutil.rmtree(workdir)
-    print(energy)
+    return energy
+
+
+def batch_calc_and_rank_by_raw_diff_energy(pdb_files: Sequence[str]) -> list[Energy]:
+    """
+    Returns:
+        sorted_index: the index of pdb_files sorted by raw_diff_energies, always in ascending order.
+        sorted_energies: the Energy list sorted by raw_diff_energies
+
+    Note: pdb_files should be a list of full paths, but the file_name in Energy is just the filename.
+    """
+    energies = []
+    for file in tqdm(pdb_files):
+        energy = calc_complex_energy(file)
+        energies.append(energy)
+    raw_diff_energies = [e.raw.diff_energy for e in energies]
+    sorted_index = np.argsort(raw_diff_energies)
+    sorted_energies = [energies[i] for i in sorted_index]
+    return sorted_index, sorted_energies
 
 
 if __name__ == "__main__":
-    complex_pdb = "/mnt/nas1/lanwei-125/IL8/v4/structure/WPIHHVT_monomer.pdb"
-    main(complex_pdb)
+    complex_pdb_path = "/mnt/nas1/lanwei-125/IL8/v4/structure/WPIHHVT_monomer.pdb"
+    print(calc_complex_energy(complex_pdb_path))

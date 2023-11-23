@@ -11,12 +11,12 @@ def cala_minimize_energy(pdb_file, log_file, steps):
 
     modeller = Modeller(pdb.topology, pdb.positions)
     modeller.addHydrogens(forcefield)
-    modeller.addSolvent(forcefield, 
-                        model='tip3p', 
-                        padding=10*angstroms)
+    #modeller.addSolvent(forcefield, 
+                        #model='tip3p', 
+                        #padding=10*angstroms)
     
     system = forcefield.createSystem(modeller.topology, 
-                                    nonbondedMethod=PME,
+                                    nonbondedMethod=NoCutoff,
                                     nonbondedCutoff=10*angstrom, 
                                     constraints=HBonds)
 
@@ -25,9 +25,8 @@ def cala_minimize_energy(pdb_file, log_file, steps):
                                         0.004*u.picoseconds)
 
     platform = Platform.getPlatformByName('OpenCL')
-    platformProperties = {'Precision': 'double'}
 
-    simulation = Simulation(modeller.topology, system, integrator, platform, platformProperties)
+    simulation = Simulation(modeller.topology, system, integrator, platform)
     simulation.context.setPositions(modeller.positions)
     simulation.minimizeEnergy()
     simulation.reporters.append(PDBReporter(output_file, 1000))
@@ -47,4 +46,4 @@ if __name__ == '__main__':
     log_file = '/mnt/sdc/lanwei/TLR2/energy.txt'
     output_file = '/mnt/sdc/lanwei/TLR2/output.pdb'
     steps = 1000
-    cala_minimize_energy('output.pdb', 'log.txt')
+    cala_minimize_energy(pdb_file, log_file, steps)
