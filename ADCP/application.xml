@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<list>
+    <pathName>
+        <!-- sequence.txt 文件的绝对路径-->
+        <sequenceTxtPath>/mnt/nas1/lanwei-125/IL8/v3/sequence.txt</sequenceTxtPath>
+
+        <!--config.trg 文件的绝对路径-->
+        <configPath>/mnt/nas1/lanwei-125/IL8/v3/ADCP/dimer/IL8.trg</configPath>
+
+        <!--工作目录路径，即创建的所有文件夹存放的目录-->
+        <copyPath>/mnt/nas1/lanwei-125/IL8/v3/ADCP/dimer</copyPath>
+    </pathName>
+    <param>
+        <model_num>5</model_num>
+        <num_steps>3500000</num_steps>
+        <core_num>8</core_num>		
+        <repeat_times>5</repeat_times>
+    </param>
+</list>

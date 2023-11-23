@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 def draw_RMSD_line():
     
     # 设置图形大小
-    plt.figure(figsize=(10,8)) 
+    plt.figure(figsize=(15,8)) 
 
     for subdir in os.listdir(root_dir):
         if os.path.isdir(os.path.join(root_dir, subdir)):
@@ -42,6 +42,7 @@ def draw_RMSD_line():
     plt.savefig(RMSD_line,dpi = 600)
 
 def plot_RMSD_box():
+    plt.figure(figsize=(15,12))
     # 存储所有RMSD值的列表
     all_rmsd = []
     valid_folders = []
@@ -70,7 +71,7 @@ def plot_RMSD_box():
     # 绘制箱线图
     plt.figure()
     df.boxplot(flierprops = {'marker':'o', 'markersize':1})
-    plt.xticks(rotation=-45)
+    plt.xticks(rotation=-35,size = 6)
     plt.ylabel('RMSD (nm)')
     plt.grid(False)
     plt.savefig(RMSD_box,dpi = 600)
@@ -79,7 +80,7 @@ def take_energy():
     with open(Energy, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         
-        writer.writerow(['Sequence', 'Energy'])
+        writer.writerow(['Sequence', 'avg', 'std'])
         
         for subdir in os.listdir(root_dir):
             filepath = os.path.join(root_dir, subdir, 'energy.dat')
@@ -90,17 +91,40 @@ def take_energy():
                         if line.startswith('DELTA TOTAL'):
                             fields = line.split()
                             avg = fields[2]
-                            std = fields[3]
-                            
-                            energy = avg + '±' + std
-                            
-                            writer.writerow([subdir, energy])
-            
+                            std = fields[3]  
+                            writer.writerow([subdir, avg, std])
+
+def draw_energy_error_plot():
+    energies = []  
+    sequences = []
+    with open(Energy) as f:
+        reader = csv.reader(f)
+        next(reader)
+        for line in reader:
+            sequence = line[0]
+            avg = line[1]
+            std = line[2]
+            sequences.append(sequence)            
+            energies.append((float(avg), float(std)))
+    # 绘制误差线图 
+
+    fig, ax = plt.subplots()
+
+    ax.errorbar(sequences, [avg for avg, std in energies], 
+                yerr=[std for avg, std in energies], fmt='o',  capsize= 5 )
+    ax.set_xlabel('Sequence')  
+    ax.set_ylabel('Energy (Kcal/mol)')
+    plt.xticks(rotation=-65)
+    plt.savefig(energy_error_plot, dpi=600)
+
+
 if __name__ == '__main__':
-    root_dir = '/mnt/nas1/lanwei-125/IL8'
+    root_dir = '/mnt/nas1/lanwei-125/IL8/v1/'
     RMSD_line = f'{root_dir}/RMSD_line.png'
     RMSD_box = f'{root_dir}/RMSD_box.png'
     Energy = f'{root_dir}/energy.csv'
+    energy_error_plot = f'{root_dir}/energy_error_plot.png'
     take_energy()
     draw_RMSD_line()
     plot_RMSD_box()
+    draw_energy_error_plot()
