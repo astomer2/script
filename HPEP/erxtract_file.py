@@ -2,8 +2,8 @@ import os
 import gzip
 import shutil
 import multiprocessing
+import statistics
 from tqdm import tqdm
-
 
 def extract_tar_gz_files(file_args):
     """
@@ -26,8 +26,6 @@ def extract_tar_gz_files(file_args):
         shutil.unpack_archive(
             filename=file_path, extract_dir=target_folder, format="gztar"
         )
-        # print(f"Extracted file {file_path} to {target_folder}")
-
 
 def multiple_extraction(folder_path, output_folder):
     """
@@ -56,8 +54,40 @@ def multiple_extraction(folder_path, output_folder):
         ):
             pass
 
+def analyze_scores(folder_path):
+    peptide_scores = {}
+    result_path = os.path.join(folder_path, "results.txt")
+    for root, dirs, files in os.walk(folder_path):
+        if "hpepdock_all.out" in files:
+            with open(os.path.join(root, "hpepdock_all.out")) as f:
+                for line in f:
+                    data = line.split()
+                    peptide = data[4]
+                    score = float(data[3])
+
+                    if peptide not in peptide_scores:
+                        peptide_scores[peptide] = []
+
+                    peptide_scores[peptide].append(score)
+  
+        with open(result_path, "w+") as f:
+            f.write("sequence\tmix\tmax\tavg\tmed\tvar\n")
+
+            for peptide, scores in peptide_scores.items():
+                min_score = min(scores)
+                max_score = max(scores)
+                avg_score = round(statistics.mean(scores), 3)
+                median_score = round(statistics.median(scores), 3)
+                variance = round(statistics.variance(scores), 3)
+
+                f.write(
+                    f"{peptide}\t{min_score}\t{max_score}\t{avg_score}"
+                    f"\t{median_score}\t{variance}\n"
+                )
+
 
 if __name__ == "__main__":
-    folder_path = "/mnt/nas1/lanwei-125/IL8/v4/HPEP/IL8-dimer/"
-    output_folder = "/mnt/nas1/lanwei-125/IL8/v4/HPEP/IL8-dimer/"
+    folder_path = "/mnt/nas1/lanwei-125/IL8/v4/HPEP/IL8-monomer/"
+    output_folder = "/mnt/nas1/lanwei-125/IL8/v4/HPEP/IL8-monomer/"
     multiple_extraction(folder_path, output_folder)
+    analyze_scores(folder_path)

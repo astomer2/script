@@ -5,7 +5,7 @@ import statistics
 
 def analyze_scores():
     peptide_scores = {}
-
+    result_path = os.path.join(input_file, "results.txt")
     for root, dirs, files in os.walk(input_file):
         if "hpepdock_all.out" in files:
             with open(os.path.join(root, "hpepdock_all.out")) as f:
@@ -18,7 +18,7 @@ def analyze_scores():
                         peptide_scores[peptide] = []
 
                     peptide_scores[peptide].append(score)
-
+  
         with open(result_path, "w+") as f:
             f.write("sequence\tmix\tmax\tavg\tmed\tvar\n")
 
@@ -35,9 +35,8 @@ def analyze_scores():
                 )
 
 if __name__ == "__main__":
-    
+
     input_file = "/mnt/nas1/lanwei-125/IL8/v4/HPEP/IL8-dimer/"
-    result_path = "/mnt/nas1/lanwei-125/PRLR/HPEP/PRL-hpep-result.txt"
 
     analyze_scores()
     print("输出成功")
