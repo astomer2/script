@@ -58,6 +58,6 @@ def multiple_extraction(folder_path, output_folder):
 
 
 if __name__ == "__main__":
-    folder_path = "/mnt/nas1/lanwei-125/PRLR/HPEP/HPEP_dock/"
-    output_folder = "/mnt/nas1/lanwei-125/PRLR/HPEP/HPEP_dock/"
+    folder_path = "/mnt/nas1/lanwei-125/IL8/v4/HPEP/IL8-dimer/"
+    output_folder = "/mnt/nas1/lanwei-125/IL8/v4/HPEP/IL8-dimer/"
     multiple_extraction(folder_path, output_folder)

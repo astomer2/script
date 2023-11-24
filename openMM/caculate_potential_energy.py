@@ -102,7 +102,7 @@ def calculate_potential_energy(pdb_file):
         constraints=HBonds,
     )
     integrator = LangevinMiddleIntegrator(
-        310 * kelvin, 1 / u.picosecond, 0.004 * u.picoseconds
+        310 * kelvin, 1 / u.picosecond, 0.002 * u.picoseconds
     )
 
     platform = Platform.getPlatformByName("OpenCL")
@@ -150,7 +150,7 @@ def calc_complex_energy(complex_pdb: str):
     chains = read_pdb_chain(workdir)
     protein, peptide = write_pdb_chain(chains, workdir)
     energy = calculate_differnet_energy(complex_pdb, protein, peptide)
-    shutil.rmtree(workdir)
+    #shutil.rmtree(workdir)
     return energy
 
 
@@ -173,5 +173,5 @@ def batch_calc_and_rank_by_raw_diff_energy(pdb_files: Sequence[str]) -> list[Ene
 
 
 if __name__ == "__main__":
-    complex_pdb_path = "/mnt/nas1/lanwei-125/IL8/v4/structure/WPIHHVT_monomer.pdb"
+    complex_pdb_path = "/mnt/sdc/lanwei/TLR2/IFKKITGKLKKWIK.pdb"
     print(calc_complex_energy(complex_pdb_path))

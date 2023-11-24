@@ -10,18 +10,15 @@ def read_score():
             if 'log.txt' not in os.listdir(sub_path):
                 continue
             log_file = open(sub_path + '/log.txt', 'r')
-            if sum(1 for line in log_file) < 20:
+            if sum(1 for line in log_file) < 25:
                 print(f'your docking job {dir} was failed,please cheak or rerun')
                 continue
             log_file.seek(0)
             lines = log_file.readlines()
-            if lines[14].split()[0] == '1':
-                score = lines[14].split()[1]  
-            elif lines[19].split()[0] == '1':
-                score = lines[19].split()[1]
-            else:
-                print(f'check {dir} log, score is not the best')
-                continue
+            for i in range(14, 25):
+                if lines[i].split()[0] == '1':
+                    score = lines[i].split()[1]
+                    break
             score_line = dir + '\t' + score + '\n'
             score_file.write(score_line)
     score_file.close()
@@ -53,10 +50,10 @@ def write_result():
             avg = np.mean(scores)
             var = np.var(scores)
     #        d = b/a + 2.5 * (variance_b/a)**0.5
-            f.write(f"{name}\t{min}\t{max}\t{avg:.2f}\t{med:.2f}\t{var:.2f}\n")
+            f.write(f"{name.upper()}\t{min}\t{max}\t{avg:.2f}\t{med:.2f}\t{var:.2f}\n")
 
 if __name__ == '__main__':
     #path = os.getcwd()
-    path = '/mnt/nas1/lanwei-125/PRLR/ADCP/'
+    path = '/mnt/nas1/lanwei-125/IL8/v4/ADCP/monomer/'
     read_score()
     write_result()

@@ -1,8 +1,6 @@
 import os
 import statistics
 
-input_file = "/mnt/nas1/lanwei-125/PRLR/HPEP/"
-result_path = "/mnt/nas1/lanwei-125/PRLR/HPEP/PRL-hpep-result.txt"
 
 
 def analyze_scores():
@@ -36,6 +34,10 @@ def analyze_scores():
                     f"\t{median_score}\t{variance}\n"
                 )
 
+if __name__ == "__main__":
+    
+    input_file = "/mnt/nas1/lanwei-125/IL8/v4/HPEP/IL8-dimer/"
+    result_path = "/mnt/nas1/lanwei-125/PRLR/HPEP/PRL-hpep-result.txt"
 
-analyze_scores()
-print("输出成功")
+    analyze_scores()
+    print("输出成功")

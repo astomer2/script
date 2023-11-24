@@ -15,6 +15,7 @@ def identify_interface_residues(workdir, needs_b=0):
         for line in lines:
             if line.startswith("ATOM"):
                 rec.append(line)
+                
 
     peptide = os.path.join(workdir, "peptide.pdb")
     with open(peptide,'r') as f:
@@ -43,21 +44,44 @@ def identify_interface_residues(workdir, needs_b=0):
 
 print(identify_interface_residues('/mnt/sdc/lanwei/TLR2/IFKKITGKLKKWIK'))
     # import pdb; pdb.set_trace()
-'''    res_list_prody=[]
-    for i in interacting_chainA_res:
-        res_list_prody.append(rec.select(' name CA and resindex %d' % i ).getResnames()[0])
-    print("prody ignore:",res_list_prody)
-    
-    if needs_b ==1:
-        interacting_chainB_res = list(set(interacting_chainB_res))
-        interacting_chainB_res.sort()
-        pep_list_prody=[]
-        for i in interacting_chainB_res:
-            pep_list_prody.append(pep.select(' name CA and resindex %d' % i ).getResnames()[0])
-        print("prody ignore(B):",pep_list_prody)
-        
-        return interacting_chainA_res,interacting_chainB_res
 
-    # interacting_chainA_res=np.array(interacting_chainA_res)
-    return interacting_chainA_res
-   '''
+def _openmm_minimize( pdb_str: str,env='implicit'):
+    """Minimize energy via openmm.
+    Adopted from AF2 minimization code """    
+    
+    pdb = PDBFile(pdb_str)
+    
+    if env == 'implicit':
+        force_field = ForceField("amber99sb.xml",'implicit/gbn2.xml')
+        print("Using GBSA (gbn2) environment for energy minimization")
+    else:
+        force_field = ForceField("amber99sb.xml")
+        print("Using in-vacuo environment for energy minimization")
+    # integrator = LangevinIntegrator(300*kelvin, 1/picosecond, 0.002*picoseconds)
+    integrator = openmm.LangevinIntegrator(0, 0.01, 0.0)
+    constraints = HBonds
+    
+    system = force_field.createSystem(  pdb.topology, nonbondedCutoff=1*nanometer, 
+                                      constraints=constraints)
+    
+    
+    ignore_list = identify_interface_residues(pdb_str) # No restrained residues
+    restrain_(system, pdb, ignore_list=ignore_list)
+
+
+    # platform = openmm.Platform.getPlatformByName("CUDA" if use_gpu else "CPU")
+    simulation = Simulation( pdb.topology, system, integrator)
+    simulation.context.setPositions(pdb.positions)
+      
+    ret = {}
+    state = simulation.context.getState(getEnergy=True, getPositions=True)
+    ret["einit"] = state.getPotentialEnergy()
+    # ret["posinit"] = state.getPositions(asNumpy=True)
+    simulation.minimizeEnergy(maxIterations=100, tolerance=0.01)
+    state = simulation.context.getState(getEnergy=True, getPositions=True)
+    ret["efinal"] = state.getPotentialEnergy()
+    # ret["pos"] = state.getPositions(asNumpy=True)
+    positions = simulation.context.getState(getPositions=True).getPositions()
+    PDBFile.writeFile(simulation.topology, positions, open(pdb_str[:-4]+"_min.pdb", 'w'))
+   
+    return ret,system
