@@ -23,26 +23,24 @@ def sovlate_pdb():
         f.write("peptide= loadpdb " + peptide_structure + "\n")
         f.write("complex = combine {protein peptide} \n")
         f.write("set default PBRadii mbondi2 \n")
-        #f.write("saveamberparm protein protein.prmtop protein.inpcrd \n")  
-        #f.write("saveamberparm peptide peptide.prmtop peptide.inpcrd \n")  
-        #f.write("saveamberparm complex complex.prmtop complex.inpcrd \n")  
         f.write("charge complex \n")
         f.write("solvatebox complex TIP3PBOX 15.0 \n")
         f.write("quit \n")
         f.close()
+
         os.system("tleap -f "+ work_path+ "/" +"unsolvateions_tleap.in ")
+
         f=open(work_path+"/"+"leap.log","r")
         ln=f.readlines()
-        #print(ln)  
         f.close()
+
         for x in range(0,len(ln)):
             if ln[x].find("Volume:") !=-1:
                 Volume=float(ln[x].split()[1])   
-                print(Volume)
         for x in range(0,len(ln)):
             if ln[x].find("Total perturbed charge:") !=-1:
-                charge=float(ln[x].split()[3])   
-                print(charge)
+                charge=float(ln[x].split()[3]) 
+
     f=open(work_path + "/" + "solvateions"+"_tleap.in","w")
     f.write("source leaprc.protein.ff14SB \n")
     f.write("source leaprc.water.tip3p \n")
@@ -54,22 +52,26 @@ def sovlate_pdb():
     f.write("complex = combine {protein peptide} \n")
     f.write("saveamberparm complex complex.prmtop complex.inpcrd \n")
     f.write("set default PBRadii mbondi2 \n")
+
     if solvateions:
         f.write("solvateBox complex TIP3PBOX 15 \n") 
         ions=round(abs(int(conc*6.023*0.0001*Volume)))  
         if charge<=0:
-            f.write("addIons complex Na+ "+str(charge)+"\n") 
+            f.write("addIons complex Na+ "+str(abs(charge))+"\n") 
         else:
             f.write("addIons complex Cl- "+str(charge)+"\n")
+
     f.write("addIonsRand complex Na+ "+str(ions)+" Cl- "+ str(ions) +"\n")           
     f.write("saveamberparm complex complex_solvated.prmtop complex_solvated.inpcrd \n")  
     f.write("savepdb complex complex_solvated.pdb  \n")
     f.write("quit")
     f.close()
+
     # call tleap to generate the file
     os.system("tleap -f "+work_path + "/"+"solvateions"+"_tleap.in")
     os.system("rm "+work_path + "/"+"solvateions"+"_tleap.in")
     os.system("rm "+work_path + "/"+"unsolvateions"+"_tleap.in")
+
     return
 
 def take_paramter_flie(parmter_file):
@@ -218,8 +220,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     work_path = args.work_path
     cuda_device_id = args.cuda_device_id
-    cmap_path = args.cmap_path
     parmter_file = args.parmter_file
+    cmap_path = args.cmap_path
 
     peptide_structure = f'{work_path}/peptide.pdb'
     protein_structure = f'{work_path}/protein.pdb'
