@@ -1,4 +1,5 @@
 import os
+from re import T
 import zipfile
 from collections import defaultdict
 
@@ -21,7 +22,7 @@ def find_sequences_and_rename(extracted_folder_base, cyclic_folder, pep_chain_id
     提取相应的序列信息，根据一些条件（比如两个SG原子的距离），
     选择某个文件作为代表，并将其重命名为该序列的新名称，最后将这些文件移动到 cyclic_folder 文件夹中。"""
     sequences = defaultdict(lambda: (float('inf'), None))
-
+    os.makedirs(cyclic_folder,exist_ok=True)
     for root, dirs, files in os.walk(extracted_folder_base):
         for file_name in files:
             if '_relaxed_rank_' in file_name and file_name.endswith('.pdb'):
@@ -51,9 +52,9 @@ def find_sequences_and_rename(extracted_folder_base, cyclic_folder, pep_chain_id
         os.rename(file_path, outfile)
 
 if __name__ == "__main__":
-    sturcture_zip_path = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/output/'
-    extracted_folder_base = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/extracted/'
-    cyclic_folder = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/cyco/'
+    sturcture_zip_path = '/mnt/nas1/lanwei-125/FGF5/remodel_generated_cycpeptide/output/'
+    extracted_folder_base = '/mnt/nas1/lanwei-125/FGF5/remodel_generated_cycpeptide/extracted/'
+    cyclic_folder = '/mnt/nas1/lanwei-125/FGF5/remodel_generated_cycpeptide/cyco/'
     pep_chain_id = 'B'
-    extract_zip_files(sturcture_zip_path, extracted_folder_base)
+    #extract_zip_files(sturcture_zip_path, extracted_folder_base)
     find_sequences_and_rename(extracted_folder_base, cyclic_folder, pep_chain_id)

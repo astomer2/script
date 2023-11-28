@@ -8,7 +8,8 @@ def make_dirs(file_path):
             filename = files.split(".")[0]
             source_path = os.path.join(file_path, files)
             dest_path = os.path.join(file_path, filename)
-            os.makedirs(dest_path, exist_ok = True)
+            os.umask(0)
+            os.makedirs(dest_path, exist_ok = True, mode=0o777)
             shutil.copy(source_path, dest_path)
 
 def read_pdb_chain(workdir):
@@ -43,6 +44,7 @@ def write_pdb_chain(chains, peptide, protein):
                 f.write('TER\n')  # 添加TER行，表示链的结束
 
 def main(workpath):
+    make_dirs(workpath)
     for root, dirs, files_names in os.walk(workpath):
         # 这里只关注文件夹路径
         for subdir in dirs:
@@ -54,7 +56,7 @@ def main(workpath):
 
 
 if __name__ == '__main__':
-    workpath = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/cyco/'
+    workpath = '/mnt/nas1/lanwei-125/PRLR/MD/'
     main(workpath)
 
 
