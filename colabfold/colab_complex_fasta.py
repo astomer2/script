@@ -38,7 +38,7 @@ def main(protein_file, peptides_file, output_dir):
 
 if __name__ == '__main__':
     protein_file = "/mnt/nas1/lanwei-125/FGF5/remodel_generated_cycpeptide/FGF5.fasta"
-    peptides_file = "/mnt/nas1/lanwei-125/FGF5/remodel_generated_cycpeptide/fgf5_peptide.txt"
-    output_dir = "/mnt/nas1/lanwei-125/FGF5/remodel_generated_cycpeptide/input/"
+    peptides_file = "/mnt/nas1/lanwei-125/FGF5/FGF5-pos/positive.txt"
+    output_dir = "/mnt/nas1/lanwei-125/FGF5/FGF5-pos/input/"
     main(protein_file, peptides_file, output_dir)
 
