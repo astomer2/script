@@ -72,7 +72,7 @@ def sovlate_pdb():
     os.system("rm "+work_path + "/"+"unsolvateions"+"_tleap.in")
     return
 
-def take_paramter_flie():
+def take_paramter_flie(parmter_file):
     for filename in os.listdir(parmter_file):
         if filename.endswith('.in'):
             source_path = os.path.join(parmter_file, filename)
@@ -80,14 +80,14 @@ def take_paramter_flie():
             shutil.copy(source_path, dest_path)
 
 
-def add_cmap_to_prmtop():
-    cmap_para_file = '/home/weilan/software/ADD-CMAP-master/ff14IDPSFF.para'
+def add_cmap_to_prmtop(cmap_path):
+    cmap_para_file = f'{cmap_path}/ff14IDPSFF.para'
     #CAMP_scrpt = '/home/weilan/software/ADD-CMAP-master/ADD_CMAP.py'
     prmtop_files = ['peptide.prmtop', 'protein.prmtop', 'complex.prmtop', 'complex_solvated.prmtop']
     for prmtop_file in prmtop_files:
         output_file = f'{prmtop_file.split(".")[0]}_CMAP.prmtop'
         cmd = ['python', 
-               '/home/weilan/software/ADD-CMAP-master/ADD_CMAP.py',
+               f'{cmap_path}/ADD_CMAP.py',
                '-p', prmtop_file,  
                '-c', cmap_para_file,
                '-o', output_file,
@@ -194,8 +194,8 @@ def simulation():
 
     os.chdir(work_path)
     sovlate_pdb()
-    take_paramter_flie()
-    add_cmap_to_prmtop()
+    take_paramter_flie(parmter_file)
+    add_cmap_to_prmtop(cmap_path)
     run_simulation()
     protein_id,reference = reference_id()
     target = target_id(protein_id)
@@ -209,16 +209,20 @@ if __name__ == "__main__":
     CMAP = True
 
     parser = argparse.ArgumentParser(description="Run amber simulation with specified parameters")
-    parser.add_argument("-p", "--work_path", required=True, help="Path to the work directory")
+    parser.add_argument("-i", "--work_path", required=True, help="Path to the work directory")
     parser.add_argument("-g", "--cuda_device_id", type=int, required=True, help="CUDA device ID")
+    parser.add_argument("-p", "--parmter_file", required=True, help="Path to the parmter file")
+    parser.add_argument("-c", "--cmap_path", required=True, help="Path to the CMAP master path")
     # Parse the command-line arguments
+    
     args = parser.parse_args()
     work_path = args.work_path
     cuda_device_id = args.cuda_device_id
+    cmap_path = args.cmap_path
+    parmter_file = args.parmter_file
 
     peptide_structure = f'{work_path}/peptide.pdb'
     protein_structure = f'{work_path}/protein.pdb'
-    parmter_file = '/home/weilan/software/amber20/amber_input'
     conc = 0.15
     simulation()
 

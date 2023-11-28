@@ -47,7 +47,6 @@ def main(workpath):
         # 这里只关注文件夹路径
         for subdir in dirs:
             subdir_path = os.path.join(root, subdir)
-
             chains = read_pdb_chain(subdir_path)
             protein = os.path.join(subdir_path, 'protein.pdb')
             peptide = os.path.join(subdir_path, 'peptide.pdb')
