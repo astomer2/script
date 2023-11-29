@@ -148,7 +148,7 @@ def calculate_potential_energy(pdb_file):
     return potentialEnergy.value_in_unit(kilocalories_per_mole)
 
 
-def calculate_differnet_energy(complex_pdb_file_path, protein_path, peptide_path , minimize = False):
+def calculate_differnet_energy(complex_pdb_file_path, protein_path, peptide_path ):
     """
     计算多肽、蛋白、复合体以及差值的势能值,单位kcal/mol
 
@@ -161,19 +161,29 @@ def calculate_differnet_energy(complex_pdb_file_path, protein_path, peptide_path
     protein_energy = round(calculate_potential_energy(protein_path), 3)
     peptide_energy = round(calculate_potential_energy(peptide_path), 3)
     diff_energy = complex_energy - protein_energy - peptide_energy
-    if minimize:
-        energy = Energy(
-            file_name,
-            raw = None,
-            minimized=EnergyUnit(complex_energy, protein_energy, peptide_energy, diff_energy),
-        )
-    else:
-        energy = Energy(
-            file_name,
-            raw=EnergyUnit(complex_energy, protein_energy, peptide_energy, diff_energy),
-            minimized=None,
 
-        )
+    return file_name, complex_energy, protein_energy, peptide_energy, diff_energy
+
+def calc_raw(complex_pdb_file_path, protein_path, peptide_path):
+    file_name = complex_pdb_file_path.split("/")[-1].split(".")[0]
+    complex_energy = round(calculate_potential_energy(complex_pdb_file_path), 3)
+    protein_energy = round(calculate_potential_energy(protein_path), 3)
+    peptide_energy = round(calculate_potential_energy(peptide_path), 3)
+    diff_energy = complex_energy - protein_energy - peptide_energy
+
+    return file_name, complex_energy, protein_energy, peptide_energy, diff_energy    
+
+def get_energy(complex_pdb_file_path, func1, func2):
+    file_name = complex_pdb_file_path.split("/")[-1].split(".")[0]
+    
+    raw_energies = func1(min=1)
+    min_energies = func2(min=0)
+    energy = Energy(
+        file_name,
+        raw=EnergyUnit(*raw_energies),
+        minimized=EnergyUnit(*min_energies),
+
+    )
     return energy
 
 

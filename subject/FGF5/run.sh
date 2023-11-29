@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # 定义参数
-WORK_PATH="/mnt/nas1/lanwei-125/PRLR/MD/KIDNYLKLLK/"
-CUDA_DEVICE_ID=0
+WORK_PATH="/mnt/nas1/lanwei-125/PRLR/MD/NEPLYHLVT/"
+CUDA_DEVICE_ID=2
 PARAMETER_FILE="/mnt/sdc/lanwei/script-1/MD/amber_paramter_files"
 CMAP_PATH="/mnt/sdc/lanwei/script-1/MD/CMAP_files"
  
