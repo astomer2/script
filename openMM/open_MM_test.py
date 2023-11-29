@@ -7,7 +7,7 @@ from simtk import unit as u
 
 def cala_minimize_energy(pdb_file, log_file, steps):
     pdb = PDBFile(pdb_file)
-    forcefield = ForceField('amber14-all.xml', 'amber14/tip3pfb.xml')
+    forcefield = ForceField('amber14-all.xml', 'implicit/gbn2.xml')
 
     modeller = Modeller(pdb.topology, pdb.positions)
     modeller.addHydrogens(forcefield)

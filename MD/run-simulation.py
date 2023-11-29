@@ -35,6 +35,7 @@ def sovlate_pdb():
         ln=f.readlines()
         #print(ln)  
         f.close()
+
         for x in range(0,len(ln)):
             if ln[x].find("Volume:") !=-1:
                 Volume=float(ln[x].split()[1])   
@@ -43,6 +44,7 @@ def sovlate_pdb():
             if ln[x].find("Total perturbed charge:") !=-1:
                 charge=float(ln[x].split()[3])   
                 print(charge)
+
     f=open(work_path + "/" + "solvateions"+"_tleap.in","w")
     f.write("source leaprc.protein.ff14SB \n")
     f.write("source leaprc.water.tip3p \n")
@@ -54,13 +56,15 @@ def sovlate_pdb():
     f.write("complex = combine {protein peptide} \n")
     f.write("saveamberparm complex complex.prmtop complex.inpcrd \n")
     f.write("set default PBRadii mbondi2 \n")
+
     if solvateions:
         f.write("solvateBox complex TIP3PBOX 15 \n") 
         ions=round(abs(int(conc*6.023*0.0001*Volume)))  
         if charge<=0:
-            f.write("addIons complex Na+ "+str(charge)+"\n") 
+            f.write("addIons complex Na+ "+str(abs(charge))+"\n") 
         else:
             f.write("addIons complex Cl- "+str(charge)+"\n")
+
     f.write("addIonsRand complex Na+ "+str(ions)+" Cl- "+ str(ions) +"\n")           
     f.write("saveamberparm complex complex_solvated.prmtop complex_solvated.inpcrd \n")  
     f.write("savepdb complex complex_solvated.pdb  \n")

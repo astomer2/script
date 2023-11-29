@@ -23,7 +23,7 @@ class EnergyUnit:
 class Energy:
     file_name: str
     raw: EnergyUnit
-    minimized: EnergyUnit = None
+    minimized: EnergyUnit 
 
 
 def copy_and_create_directory(pdb_path):
@@ -41,33 +41,38 @@ def copy_and_create_directory(pdb_path):
         return workdir
 
 
-def read_pdb_chain(workdir):
+def read_pdb_chain(workdir, pdb_path):
     """
     读取PDB文件中的链信息
-    :param workdir: 工作目录
+    :param workdir: 工作目录 
+    :param pdb_path: PDB文件路径
+    :return : chains 字典
     """
     chains = {}
-    for pdb_name in [f for f in os.listdir(workdir) if f.endswith(".pdb")]:
-        input_pdb = os.path.join(workdir, pdb_name)
-
-        with open(input_pdb) as f:
-            for line in f:
-                if line.startswith("ATOM"):
-                    chain_id = line[21]
-                    chains.setdefault(chain_id, []).append(line)
+    file_name = pdb_path.split("/")[-1]
+    input_pdb = os.path.join(workdir, file_name)
+    with open(input_pdb) as f:
+        for line in f:
+            if line.startswith("ATOM"):
+                chain_id = line[21]
+                chains.setdefault(chain_id, []).append(line)
     return chains
 
 
-def write_pdb_chain(chains, workdir):
+def write_pdb_chain(chains, workdir, minimize = False):
     """
     将PDB文件中的链信息写入到PDB文件中
     :param chains: 链信息
     :param workdir: 工作目录
     """
-
-    protein = os.path.join(workdir, "protein.pdb")
-    peptide = os.path.join(workdir, "peptide.pdb")
+    if minimize :
+        protein = os.path.join(workdir, "minimized_protein.pdb")
+        peptide = os.path.join(workdir, "minimized_peptide.pdb")
+    else:
+        protein = os.path.join(workdir, "protein.pdb")
+        peptide = os.path.join(workdir, "peptide.pdb")
     chain_ids = len(chains)
+
     if chain_ids >= 2:
         all_chains = list(chains.values())
 
@@ -85,6 +90,35 @@ def write_pdb_chain(chains, workdir):
     else:
         pass
     return protein, peptide
+
+def openmm_minimize(pdb_file, workdir):
+    """
+    使用OpenMM自带的minimize函数进行拟合
+    :param pdb_file:
+    """
+    pdb = PDBFile(pdb_file)
+    forcefield = ForceField("amber14-all.xml", "amber14/tip3pfb.xml")
+    system = forcefield.createSystem(
+        pdb.topology,
+        nonbondedMethod=NoCutoff,
+        nonbondedCutoff=10 * angstrom,
+        constraints=HBonds,
+    )
+    integrator = LangevinMiddleIntegrator(
+        310 * kelvin, 1 / u.picosecond, 0.002 * u.picoseconds
+    )    
+
+    platform = Platform.getPlatformByName("OpenCL")
+    simulation = Simulation( pdb.topology, system, integrator, platform)
+    simulation.context.setPositions(pdb.positions)
+
+    simulation.minimizeEnergy(maxIterations=100, tolerance=0.01)
+    positions = simulation.context.getState(getPositions=True).getPositions()
+    file_name = pdb_file.split("/")[-1].split(".")[0]
+    minize_pdb = os.path.join(workdir, file_name + "_minimized.pdb")
+    PDBFile.writeFile(simulation.topology, positions, open(minize_pdb, 'w'))
+
+    return minize_pdb
 
 
 def calculate_potential_energy(pdb_file):
@@ -114,7 +148,7 @@ def calculate_potential_energy(pdb_file):
     return potentialEnergy.value_in_unit(kilocalories_per_mole)
 
 
-def calculate_differnet_energy(complex_pdb_file_path, protein_path, peptide_path):
+def calculate_differnet_energy(complex_pdb_file_path, protein_path, peptide_path , minimize = False):
     """
     计算多肽、蛋白、复合体以及差值的势能值,单位kcal/mol
 
@@ -127,14 +161,23 @@ def calculate_differnet_energy(complex_pdb_file_path, protein_path, peptide_path
     protein_energy = round(calculate_potential_energy(protein_path), 3)
     peptide_energy = round(calculate_potential_energy(peptide_path), 3)
     diff_energy = complex_energy - protein_energy - peptide_energy
-    energy = Energy(
-        file_name,
-        raw=EnergyUnit(complex_energy, protein_energy, peptide_energy, diff_energy),
-    )
+    if minimize:
+        energy = Energy(
+            file_name,
+            raw = None,
+            minimized=EnergyUnit(complex_energy, protein_energy, peptide_energy, diff_energy),
+        )
+    else:
+        energy = Energy(
+            file_name,
+            raw=EnergyUnit(complex_energy, protein_energy, peptide_energy, diff_energy),
+            minimized=None,
+
+        )
     return energy
 
 
-def calc_complex_energy(complex_pdb: str):
+def calc_complex_energy(complex_pdb: str, minimize: bool = False):
     """
     Advice to rank the complex energy by raw diff_energy in output.
 
@@ -147,10 +190,19 @@ def calc_complex_energy(complex_pdb: str):
     """
     complex_pdb = str(complex_pdb)
     workdir = copy_and_create_directory(complex_pdb)
-    chains = read_pdb_chain(workdir)
+    chains = read_pdb_chain(workdir,complex_pdb)
     protein, peptide = write_pdb_chain(chains, workdir)
     energy = calculate_differnet_energy(complex_pdb, protein, peptide)
-    #shutil.rmtree(workdir)
+
+    if minimize:
+        minimize_pdb = openmm_minimize(complex_pdb, workdir)
+        minimize_chains = read_pdb_chain(workdir, minimize_pdb)
+        minimize_protein, minimize_peptide = write_pdb_chain(minimize_chains, workdir)
+        minimize_energy = calculate_differnet_energy(minimize_pdb, minimize_protein, minimize_peptide)
+        shutil.rmtree(workdir)
+        return energy, minimize_energy
+    
+    shutil.rmtree(workdir)
     return energy
 
 
@@ -173,5 +225,5 @@ def batch_calc_and_rank_by_raw_diff_energy(pdb_files: Sequence[str]) -> list[Ene
 
 
 if __name__ == "__main__":
-    complex_pdb_path = "/mnt/sdc/lanwei/TLR2/IFKKITGKLKKWIK.pdb"
-    print(calc_complex_energy(complex_pdb_path))
+    complex_pdb_path = "/mnt/sdc/lanwei/TLR2/HGRGFITKA.pdb"
+    print(calc_complex_energy(complex_pdb_path,minimize = True))

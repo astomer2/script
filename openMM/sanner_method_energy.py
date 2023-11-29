@@ -192,7 +192,7 @@ def get_single_point_energy(pdbfile,mode='vacuum'):
 
 if __name__ == "__main__":
     env='implicit'
-    pdb_path = '/mnt/sdc/lanwei/TLR2/IFKKITGKLKKWIK.pdb'
+    pdb_path = '/mnt/sdc/lanwei/TLR2/HGRGFITKA.pdb'
     workdir = copy_and_create_directory(pdb_path)
     chains =read_pdb_chain(workdir)
     protein, peptide = write_pdb_chain( chains,workdir)
@@ -201,7 +201,7 @@ if __name__ == "__main__":
     a = get_single_point_energy(pdb_path)
     a1 = get_single_point_energy(protein)
     a2 = get_single_point_energy(peptide)
-    print(a,a1,a2)san
+    print(a,a1,a2)
     
     workdir1 = copy_and_create_directory(minimized_pdb)
     chains1 =read_pdb_chain(workdir1)
