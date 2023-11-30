@@ -148,7 +148,7 @@ def calculate_potential_energy(pdb_file):
     return potentialEnergy.value_in_unit(kilocalories_per_mole)
 
 
-def calculate_differnet_energy(complex_pdb_file_path, protein_path, peptide_path ):
+def calculate_raw_energy(complex_pdb, workdir):
     """
     计算多肽、蛋白、复合体以及差值的势能值,单位kcal/mol
 
@@ -156,37 +156,45 @@ def calculate_differnet_energy(complex_pdb_file_path, protein_path, peptide_path
         complex_pdb_file_path: 输入的复合体的pdb文件路径
         protein_path, peptide_path: 临时生成的蛋白、多肽的路径
     """
-    file_name = complex_pdb_file_path.split("/")[-1].split(".")[0]
-    complex_energy = round(calculate_potential_energy(complex_pdb_file_path), 3)
-    protein_energy = round(calculate_potential_energy(protein_path), 3)
-    peptide_energy = round(calculate_potential_energy(peptide_path), 3)
+    chains = read_pdb_chain(workdir,complex_pdb)
+    protein, peptide = write_pdb_chain(chains, workdir)
+
+    complex_energy = round(calculate_potential_energy(complex_pdb), 3)
+    protein_energy = round(calculate_potential_energy(protein), 3)
+    peptide_energy = round(calculate_potential_energy(peptide), 3)
     diff_energy = complex_energy - protein_energy - peptide_energy
 
-    return file_name, complex_energy, protein_energy, peptide_energy, diff_energy
+    return  complex_energy, protein_energy, peptide_energy, diff_energy
 
-def calc_raw(complex_pdb_file_path, protein_path, peptide_path):
-    file_name = complex_pdb_file_path.split("/")[-1].split(".")[0]
-    complex_energy = round(calculate_potential_energy(complex_pdb_file_path), 3)
-    protein_energy = round(calculate_potential_energy(protein_path), 3)
-    peptide_energy = round(calculate_potential_energy(peptide_path), 3)
+def calc_minize_energy(complex_pdb, workdir):
+
+    minimize_pdb = openmm_minimize(complex_pdb, workdir)
+    minimize_chains = read_pdb_chain(workdir, minimize_pdb)
+    minimize_protein, minimize_peptide = write_pdb_chain(minimize_chains, workdir)
+
+    complex_energy = round(calculate_potential_energy(minimize_pdb), 3)
+    protein_energy = round(calculate_potential_energy(minimize_protein), 3)
+    peptide_energy = round(calculate_potential_energy(minimize_peptide), 3)
     diff_energy = complex_energy - protein_energy - peptide_energy
 
-    return file_name, complex_energy, protein_energy, peptide_energy, diff_energy    
+    return complex_energy, protein_energy, peptide_energy, diff_energy    
 
-def get_energy(complex_pdb_file_path, func1, func2):
-    file_name = complex_pdb_file_path.split("/")[-1].split(".")[0]
-    
-    raw_energies = func1(min=1)
-    min_energies = func2(min=0)
+def calc_complex_energy(complex_pdb):
+    complex_pdb = str(complex_pdb())
+    workdir = copy_and_create_directory(complex_pdb)
+    file_name = complex_pdb.split("/")[-1].split(".")[0]
+    raw_energies = calculate_raw_energy(complex_pdb, workdir)
+    min_energies = calc_minize_energy(complex_pdb, workdir)
     energy = Energy(
         file_name,
         raw=EnergyUnit(*raw_energies),
         minimized=EnergyUnit(*min_energies),
 
     )
+    shutil.rmtree(workdir)
     return energy
 
-
+'''
 def calc_complex_energy(complex_pdb: str, minimize: bool = False):
     """
     Advice to rank the complex energy by raw diff_energy in output.
@@ -214,7 +222,7 @@ def calc_complex_energy(complex_pdb: str, minimize: bool = False):
     
     shutil.rmtree(workdir)
     return energy
-
+'''
 
 def batch_calc_and_rank_by_raw_diff_energy(pdb_files: Sequence[str]) -> list[Energy]:
     """
@@ -236,4 +244,4 @@ def batch_calc_and_rank_by_raw_diff_energy(pdb_files: Sequence[str]) -> list[Ene
 
 if __name__ == "__main__":
     complex_pdb_path = "/mnt/sdc/lanwei/TLR2/HGRGFITKA.pdb"
-    print(calc_complex_energy(complex_pdb_path,minimize = True))
+    print(calc_complex_energy(complex_pdb_path))

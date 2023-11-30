@@ -10,16 +10,12 @@ from pathlib import Path
 from icecream import ic
 from modeller import energy_data
 
-sys.path.append(os.path.abspath('.'))
-
-from openMM.caculate_potential_energy import batch_calc_and_rank_by_raw_diff_energy
-
 list  = []
-for root, dirs, files in os.walk("/mnt/nas1/lanwei-125/PRLR/MD/"):
+for root, dirs, files in os.walk("/mnt/sdc/lanwei/software/cPEPmatch/5w59/colab/cycol/"):
     for file in files:
         if file.endswith('.pdb'):
-            pdb_path = os.path.join(root, file)
-            list.append(pdb_path)    
+            list.append(file.split('.')[0])    
 
-
-ic(batch_calc_and_rank_by_raw_diff_energy(list))
+with open("log.txt", "a+") as f:
+    for pdb in list:
+        f.write(pdb + "\n")
