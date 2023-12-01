@@ -159,7 +159,7 @@ def sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, solvatei
      
 
     if solvateions:
-        
+
         f.write("solvateBox complex TIP3PBOX 15 \n") 
         if charge<=0:
             f.write("addIons complex Na+ "+str(abs(charge))+"\n") 
@@ -267,7 +267,7 @@ def analysis(work_path, reference,target):
     os.system("MMPBSA.py --clean")
 
 
-def simulation(work_path, parmter_file ,cmap_path , cuda_device_id,induced_hydrogen, solvateions, CMAP, pepcyc):
+def simulation(work_path, parmter_file ,cmap_path , cuda_device_id, induced_hydrogen, solvateions, CMAP, pepcyc):
 
     os.chdir(work_path)
     peptide_structure = f'{work_path}/peptide.pdb'
