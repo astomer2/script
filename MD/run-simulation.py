@@ -1,9 +1,103 @@
+from itertools import cycle
 import os
 import shutil
+from pathlib import Path
 import subprocess
 import argparse
 
-def sovlate_pdb():
+def extract_three_letter_code(peptide_structure):
+    """
+    Extracts the three-letter amino acid sequences, sequence lengths, and file names from .pdb files in a given directory.
+
+    :param work_path: Path to the directory containing the .pdb files.
+    :return: A tuple of three lists: sequences, sequence_lengths, and file_names.
+    """
+    sequences = []
+
+    with open(peptide_structure, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    sequence = []
+    residue_ids = []
+    for line in lines:
+        if line.startswith("ATOM") :
+            res_id = line[22:27].strip()
+            if res_id not in residue_ids:
+                residue_ids.append(res_id)
+                res_name = line[17:20]
+                sequence.append(res_name)
+    sequence_str = " ".join(sequence)
+    sequences.append(sequence_str)
+    sequence_lengths = len(sequence)
+    return sequences, sequence_lengths
+
+
+def reference_id(protein_structure):
+    """
+    Generates a reference ID based on the protein structure.
+    Reads the protein structure from the given file path and retrieves the lines.
+    Iterates through the lines and extracts the protein ID from each line that starts
+    with 'ATOM'. If the protein ID is different from the previous one, increments the
+    residue count. Finally, constructs the reference ID string and returns the protein ID
+    and reference ID.
+    Parameters:
+        protein_structure (str): The file path of the protein structure.
+    Returns:
+        tuple: A tuple containing the protein ID (str) and reference ID (str).
+    """
+    with open(protein_structure) as f:
+        lines = f.readlines()
+
+    residue_count = 0
+    prev_res_id = 0
+    for line in lines:
+        if line.startswith('ATOM'):
+            protein_id = line[22:26].strip()
+            if protein_id != prev_res_id:
+                residue_count += 1
+            prev_res_id = protein_id
+    reference = f"1-{protein_id}"
+    print(reference)
+    print(protein_id)
+    return protein_id, reference
+
+def target_id(protein_id, peptide_structure):
+    """
+    Function to generate a target ID based on a protein ID and peptide structure.
+
+    Parameters:
+    protein_id (int): The ID of the protein.
+
+    Returns:
+    str: The generated target ID.
+
+    This function reads the peptide structure from a file and calculates the target ID based on the protein ID and peptide ID. It iterates over the lines in the file, extracting the peptide ID from lines starting with 'ATOM'. If the peptide ID is different from the previous one, the residue count is incremented. Finally, the target ID is calculated as the sum of the protein ID and the peptide ID, plus 1.
+
+    Example:
+    >>> target_id(5)
+    '6-11'
+    """
+    with open(peptide_structure) as f:
+        lines = f.readlines()
+
+    residue_count = 0
+    prev_res_id = 0
+    peptide_id = 0 
+    for line in lines:
+        if line.startswith('ATOM'):
+            peptide_id = line[22:26].strip()
+            if peptide_id != prev_res_id:
+                residue_count += 1
+            prev_res_id = peptide_id
+
+    target = f"{int(protein_id)+1}-{int(peptide_id)+int(protein_id)}"
+    print(peptide_id)
+    print (target)
+    return target
+
+def sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, solvateions ,pepcyc):
+    Volume = 0
+    charge = 0
+    ions =  0
     if induced_hydrogen :
         os.system("pdb4amber -y -i  " + protein_structure + "  -o " + protein_structure.split(".")[0] + "_h.pdb")
         os.system("pdb4amber -y -i  "+ peptide_structure + "  -o " + peptide_structure.split(".")[0] + "_h.pdb")
@@ -45,25 +139,37 @@ def sovlate_pdb():
     f.write("source leaprc.protein.ff14SB \n")
     f.write("source leaprc.water.tip3p \n")
     f.write("loadamberparams frcmod.ions1lm_1264_tip3p \n")
+
+    if pepcyc :
+        sequences, sequence_lengths = extract_three_letter_code(peptide_structure)
+        formatted_sequence = "{" + " ".join(sequences) + "}"
+        f.write("peptide= loadpdbusingseq  " + peptide_structure + formatted_sequence +"\n")
+        f.write("remove peptide peptide."+ str(sequence_lengths) +".OXT \n")
+        f.write("bond peptide.1.N peptide."+ str(sequence_lengths) +".C \n")
+    else:
+        f.write("peptide= loadpdb " + peptide_structure + "\n")
+
     f.write("protein= loadpdb " + protein_structure + "\n")
-    f.write("peptide= loadpdb " + peptide_structure + "\n")
     f.write("saveamberparm protein protein.prmtop protein.inpcrd \n")  
     f.write("saveamberparm peptide peptide.prmtop peptide.inpcrd \n")  
     f.write("complex = combine {protein peptide} \n")
     f.write("saveamberparm complex complex.prmtop complex.inpcrd \n")
     f.write("set default PBRadii mbondi2 \n")
 
+     
+
     if solvateions:
+        
         f.write("solvateBox complex TIP3PBOX 15 \n") 
-        ions=round(abs(int(conc*6.023*0.0001*Volume)))  
         if charge<=0:
             f.write("addIons complex Na+ "+str(abs(charge))+"\n") 
         else:
             f.write("addIons complex Cl- "+str(charge)+"\n")
 
-    f.write("addIonsRand complex Na+ "+str(ions)+" Cl- "+ str(ions) +"\n")           
-    f.write("saveamberparm complex complex_solvated.prmtop complex_solvated.inpcrd \n")  
-    f.write("savepdb complex complex_solvated.pdb  \n")
+        ions=round(abs(int(conc*6.023*0.0001*Volume))) 
+        f.write("addIonsRand complex Na+ "+str(ions)+" Cl- "+ str(ions) +"\n") 
+        f.write("saveamberparm complex complex_solvated.prmtop complex_solvated.inpcrd \n")  
+        f.write("savepdb complex complex_solvated.pdb  \n")      
     f.write("quit")
     f.close()
 
@@ -99,9 +205,11 @@ def add_cmap_to_prmtop(cmap_path):
 
 
 
-def run_simulation():
+def run_simulation(cuda_device_id ,CMAP ,cmap_path):
+
     os.environ["CUDA_VISIBLE_DEVICES"] = str(cuda_device_id)
     if CMAP :
+        add_cmap_to_prmtop(cmap_path)
         complex_prmtop = 'complex_solvated_CMAP.prmtop'
     else :
         complex_prmtop = 'complex_solvated.prmtop'
@@ -117,43 +225,10 @@ def run_simulation():
     os.system(f"pmemd.cuda -O -i 08.min.in -o min8.out -p {complex_prmtop} -c complex_min_07.rst -r complex_min_08.rst -x complex_min_08.mdcrd -ref complex_min_07.rst")
     os.system(f"pmemd.cuda -O -i 09.md.in -o md1.out -p {complex_prmtop} -c complex_min_08.rst -r complex_md1.rst -x complex_md1.mdcrd -ref complex_min_08.rst")
 
-def reference_id():
-    with open(protein_structure) as f:
-        lines = f.readlines()
-
-    residue_count = 0
-    prev_res_id = 0
-    for line in lines:
-        if line.startswith('ATOM'):
-            protein_id = line[22:26].strip()
-            if protein_id != prev_res_id:
-                residue_count += 1
-            prev_res_id = protein_id
-    reference = f"1-{protein_id}"
-    print(reference)
-    print(protein_id)
-    return protein_id,reference
-
-def target_id(protein_id):
-    with open(peptide_structure) as f:
-        lines = f.readlines()
-
-    residue_count = 0
-    prev_res_id = 0
-    for line in lines:
-        if line.startswith('ATOM'):
-            peptide_id = line[22:26].strip()
-            if peptide_id != prev_res_id:
-                residue_count += 1
-            prev_res_id = peptide_id
-
-    target = f"{int(protein_id)+1}-{int(peptide_id)+int(protein_id)}"
-    print(peptide_id)
-    print (target)
-    return target
 
 
-def analysis(reference,target):
+
+def analysis(work_path, reference,target):
     if CMAP :
         complex_prmtop = 'complex_solvated_CMAP.prmtop'
     else :
@@ -192,41 +267,70 @@ def analysis(reference,target):
     os.system("MMPBSA.py --clean")
 
 
-def simulation():
+def simulation(work_path, parmter_file ,cmap_path , cuda_device_id,induced_hydrogen, solvateions, CMAP, pepcyc):
 
     os.chdir(work_path)
-    sovlate_pdb()
+    peptide_structure = f'{work_path}/peptide.pdb'
+    protein_structure = f'{work_path}/protein.pdb'
+    sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, solvateions, pepcyc)
     take_paramter_flie(parmter_file)
-    add_cmap_to_prmtop(cmap_path)
-    run_simulation()
-    protein_id,reference = reference_id()
-    target = target_id(protein_id)
-    analysis(reference,target)
+    run_simulation(cuda_device_id, CMAP, cmap_path)
+    protein_id ,reference = reference_id(protein_structure)
+    target = target_id(protein_id, peptide_structure)
+    analysis(work_path, reference, target)
 
 
 if __name__ == "__main__":
-    # 判断
-    induced_hydrogen = True
-    solvateions = True
-    CMAP = True
+    # 设置默认参数
+    default_cuda_device_id = 0
+    default_parmter_file = "/mnt/sdc/lanwei/script-1/MD/amber_paramter_files"
+    default_cmap_path = "/mnt/sdc/lanwei/script-1/MD/CMAP_files"
+    # 定义命令行参数
+    parser = argparse.ArgumentParser(description="Run amber simulation with specified parameters, if no parameters are specified, default parameters will be used")
+    parser.add_argument("-i", "--work_path", required=True, help="Path to the work directory, should have protein.pdb and peptide.pdb, must be required")
+    parser.add_argument("-g", "--cuda_device_id", nargs='?',type=int, default=default_cuda_device_id, help="CUDA device ID,  default is 0")
+    parser.add_argument("-p", "--parmter_file", nargs='?', type=str, default=default_parmter_file, help="Path to the amber simulation parmter files, default is /mnt/sdc/lanwei/script-1/MD/amber_paramter_files,  must be required")
+    parser.add_argument("-c", "--CMAP_path", nargs='?',type=str, default=default_cmap_path, help="Path to the CMAP master path, default is /mnt/sdc/lanwei/script-1/MD/CMAP_files")
+    parser.add_argument("-hyd", "--induced_hydrogen", nargs='?',type=int, choices=[0, 1], default=1, help="Use pdb4amber to reduce oridnally hydrogen, and add amber format hydrogens, default is False")
+    parser.add_argument("-solv", "--solvateions",nargs='?', type=int, choices=[0, 1], default=1, help="Enable solvations, default is False")
+    parser.add_argument("-CAMP", "--CMAP", nargs='?', type=int, choices=[0, 1], default=0, help="Enable CMAP, induced charmm36 parameters for Amber prmtop file, default is False")
+    parser.add_argument("-cyc", "--pepcyc", nargs='?', type=int, choices=[0, 1], default=0, help="Enable pepcyc, Cyclize the first and last amino acids of the peptide if enabled, close CMAP, default is False")
 
-    parser = argparse.ArgumentParser(description="Run amber simulation with specified parameters")
-    parser.add_argument("-i", "--work_path", required=True, help="Path to the work directory")
-    parser.add_argument("-g", "--cuda_device_id", type=int, required=True, help="CUDA device ID")
-    parser.add_argument("-p", "--parmter_file", required=True, help="Path to the parmter file")
-    parser.add_argument("-c", "--cmap_path", required=True, help="Path to the CMAP master path")
-    # Parse the command-line arguments
-    
+    # 解析命令行参数
     args = parser.parse_args()
+
+    # 设置参数
     work_path = args.work_path
     cuda_device_id = args.cuda_device_id
     parmter_file = args.parmter_file
-    cmap_path = args.cmap_path
+    cmap_path = args.CMAP_path  # 修改为 CMAP_path，与命令行参数一致
+    induced_hydrogen = bool(args.induced_hydrogen)
+    solvateions = bool(args.solvateions)
+    CMAP = bool(args.CMAP)
+    pepcyc = bool(args.pepcyc)
 
-    peptide_structure = f'{work_path}/peptide.pdb'
-    protein_structure = f'{work_path}/protein.pdb'
+    # 增加额外的判断
+    if pepcyc and CMAP:
+        raise ValueError("Error: When pepcyc is True, CMAP must be False.")
+    if CMAP and not pepcyc:
+        # 可以使用默认路径参数，也可以手动传入-c的参数
+        cmap_path = args.CMAP_path
+
+    # 设置默认值
+
+    if parmter_file is None:
+        parmter_file = default_parmter_file
+    if cmap_path is None:
+        cmap_path = default_cmap_path
+    if cuda_device_id is None:
+        cuda_device_id = default_cuda_device_id
+
+    # 盐浓度
     conc = 0.15
-    simulation()
+
+    # 调用 simulation 函数
+    simulation(work_path, parmter_file, cmap_path, cuda_device_id, induced_hydrogen, solvateions, CMAP, pepcyc)
+
 
 
     

@@ -56,7 +56,7 @@ def main(workpath):
 
 
 if __name__ == '__main__':
-    workpath = '/mnt/nas1/lanwei-125/PRLR/MD/'
+    workpath = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/cyco/KYMAEYMYD/'
     main(workpath)
 
 

@@ -24,6 +24,7 @@ def write_peptide_fasta(peptide_seqs, protein_seq, output_dir):
     for peptide in peptide_seqs:
         outfile = os.path.join(output_dir, peptide + '.fasta')
         if not os.path.exists(output_dir):
+            os.umask(0)
             os.makedirs(output_dir)
         with open(outfile, 'w') as f:
             f.write('>'+ peptide+'\n')
@@ -38,7 +39,7 @@ def main(protein_file, peptides_file, output_dir):
 
 if __name__ == '__main__':
     protein_file = "/mnt/nas1/lanwei-125/FGF5/remodel_generated_cycpeptide/FGF5.fasta"
-    peptides_file = "/mnt/nas1/lanwei-125/FGF5/FGF5-pos/positive.txt"
-    output_dir = "/mnt/nas1/lanwei-125/FGF5/FGF5-pos/input/"
+    peptides_file = "/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/sequence.txt"
+    output_dir = "/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/input/"
     main(protein_file, peptides_file, output_dir)
 

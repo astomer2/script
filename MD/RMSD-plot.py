@@ -119,7 +119,7 @@ def draw_energy_error_plot():
 
 
 if __name__ == '__main__':
-    root_dir = '/mnt/nas1/lanwei-125/IL8/v4/MD/'
+    root_dir = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/cyco/'
     RMSD_line = f'{root_dir}/RMSD_line.png'
     RMSD_box = f'{root_dir}/RMSD_box.png'
     Energy = f'{root_dir}/energy.csv'

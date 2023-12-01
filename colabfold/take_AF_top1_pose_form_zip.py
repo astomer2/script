@@ -1,6 +1,7 @@
 import os
 import zipfile
 import shutil
+from MD.split_pdb_file import split_pdb_file
 
 def extract_and_move_pdb_files(zip_folder, output_folder):
     os.makedirs(output_folder, exist_ok=True)
@@ -10,13 +11,21 @@ def extract_and_move_pdb_files(zip_folder, output_folder):
             file_path = os.path.join(zip_folder, file_name)
 
             with zipfile.ZipFile(file_path, 'r') as zip_ref:
-                for f in zip_ref.namelist():
-                    if '_relaxed_rank_001' in f and f.endswith('.pdb'):
-                        print(f)
-                        name_parts = f.split('_')
-                        pdb_name = '_'.join(name_parts[:2]) + '.pdb'
-                        zip_ref.extract(f, zip_folder)  
-                        shutil.move(os.path.join(zip_folder, f), os.path.join(output_folder, pdb_name))
+                # 创建一个目录用于解压缩文件
+                extract_folder = os.path.join(zip_folder, 'extracted_files')
+                os.makedirs(extract_folder, exist_ok=True)
+                zip_ref.extractall(extract_folder)
+
+                for root, dirs, files in os.walk(extract_folder):
+                    for file in files:
+                        if '_relaxed_rank_001' in file and file.endswith('.pdb'):
+                            print(file)
+                            name_parts = file.split('_')
+                            pdb_name = name_parts[0] + '.pdb'
+                            shutil.move(os.path.join(root, file), os.path.join(output_folder, pdb_name))
+
+                # 删除临时的解压缩目录
+                shutil.rmtree(extract_folder)
 
 def organize_pdb_files_by_folder(input_folder):
     for pdb_name in os.listdir(input_folder):
@@ -25,15 +34,17 @@ def organize_pdb_files_by_folder(input_folder):
             pdb_name_list = os.path.splitext(pdb_name)[0]
             folder_path = os.path.join(input_folder, pdb_name_list)
 
+            os.umask(0)
             # Create the folder if it doesn't exist
-            os.makedirs(folder_path, exist_ok=True, mode=0o777)
+            os.makedirs(folder_path, exist_ok=True)
 
             # Move the .pdb file into its corresponding folder
             shutil.move(os.path.join(input_folder, pdb_name), os.path.join(folder_path, pdb_name))
 
 if __name__ == "__main__":
-    sturcture_zip_path = '/mnt/nas1/lanwei-125/IL8/v4/AF/'
-    top_pose_path = '/mnt/nas1/lanwei-125/IL8/v4/MD/'
+    sturcture_zip_path = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/MD'
+    top_pose_path = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/cyco'
 
-    extract_and_move_pdb_files(sturcture_zip_path, top_pose_path)
+    #extract_and_move_pdb_files(sturcture_zip_path, top_pose_path)
     organize_pdb_files_by_folder(top_pose_path)
+    split_pdb_file(top_pose_path)

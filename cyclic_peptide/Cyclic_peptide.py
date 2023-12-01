@@ -113,7 +113,7 @@ def colabfold(sequences):
         os.makedirs(output_dir)
 
 # python 解释器内核换成colabfold环境
-    os.system('colabfold_batch  {}  {}  --amber --zip'.format(input_dir, output_dir))
+    os.system('colabfold_batch  {}  {}  --use-gpu-relax --amber --zip'.format(input_dir, output_dir))
 
 if __name__ == '__main__':
     work_path  = '/mnt/sdc/lanwei/software/cPEPmatch/5w59/'
