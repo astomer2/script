@@ -3257,3 +3257,139 @@ Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG 
 Note: The following floating-point exceptions are signalling: IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
 Note: The following floating-point exceptions are signalling: IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
 Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+Note: The following floating-point exceptions are signalling: IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_OVERFLOW_FLAG IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+Note: The following floating-point exceptions are signalling: IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_OVERFLOW_FLAG IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+ERROR: Calculation halted.  Periodic box dimensions have changed too much from their initial values.
+  Your system density has likely changed by a large amount, probably from
+  starting the simulation from a structure a long way from equilibrium.
+
+  [Although this error can also occur if the simulation has blown up for some reason]
+
+  The GPU code does not automatically reorganize grid cells and thus you
+  will need to restart the calculation from the previous restart file.
+  This will generate new grid cells and allow the calculation to continue.
+  It may be necessary to repeat this restarting multiple times if your system
+  is a long way from an equilibrated density.
+
+  Alternatively you can run with the CPU code until the density has converged
+  and then switch back to the GPU code.
+
+Note: The following floating-point exceptions are signalling: IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+Note: The following floating-point exceptions are signalling: IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+Note: The following floating-point exceptions are signalling: IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+Note: The following floating-point exceptions are signalling: IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+Note: The following floating-point exceptions are signalling: IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+Note: The following floating-point exceptions are signalling: IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_OVERFLOW_FLAG IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+Note: The following floating-point exceptions are signalling: IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+Note: The following floating-point exceptions are signalling: IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_OVERFLOW_FLAG IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+Note: The following floating-point exceptions are signalling: IEEE_INVALID_FLAG IEEE_OVERFLOW_FLAG IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+STOP PMEMD Terminated Abnormally!
+Error: 'complex_md1.mdcrd': No such file or directory
+Error: Could not set up input trajectory 'complex_md1.mdcrd'.
+	1 errors encountered reading input.
+Error: Error(s) occurred during execution.
+
+CPPTRAJ: Trajectory Analysis. V6.4.4 (AmberTools)
+    ___  ___  ___  ___
+     | \/ | \/ | \/ | 
+    _|_/\_|_/\_|_/\_|_
+
+| Date/time: 12/01/23 18:00:39
+| Available memory: 2.239 GB
+
+INPUT: Reading input from 'cpptraj.in'
+  [parm complex_solvated.prmtop]
+	Reading 'complex_solvated.prmtop' as Amber Topology
+	Radius Set: H(N)-modified Bondi radii (mbondi2)
+  [parmstrip :WAT,Na+,Cl-]
+	Stripping atoms in mask [:WAT,Na+,Cl-] (35889) from complex_solvated.prmtop
+	Stripped parm: 2241 atoms, 140 res, box: Orthorhombic, 2 mol
+  [parmbox nobox]
+	Removing box information from parm 0:complex_solvated.prmtop
+	Box: 'None' XYZ= {    0.000    0.000    0.000 } ABG= {   0.00   0.00   0.00 }
+  [parmwrite out fixed.prmtop]
+	Writing topology 0 (complex_solvated.prmtop) to 'fixed.prmtop' with format Amber Topology
+	Memory used by full exclusion list: 48.796 kB
+  [go]
+---------- RUN BEGIN -------------------------------------------------
+Warning: No input trajectories specified.
+TIME: Analyses took 0.0000 seconds.
+
+RUN TIMING:
+TIME:		Init               : 0.0000 s (  0.00%)
+TIME:		Trajectory Process : 0.0000 s (  0.00%)
+TIME:		Action Post        : 0.0000 s (  0.00%)
+TIME:		Analysis           : 0.0000 s (  7.14%)
+TIME:		Data File Write    : 0.0000 s (  0.00%)
+TIME:		Other              : 0.0000 s (  0.93%)
+TIME:	Run Total 0.0000 s
+---------- RUN END ---------------------------------------------------
+  [clear all]
+	Clearing Actions.
+	Clearing input trajectories/ensembles.
+	Clearing reference coordinates.
+	Clearing output trajectories.
+	Clearing topologies.
+	Clearing Analyses.
+	Clearing data files.
+	Clearing data sets.
+  [parm complex_solvated.prmtop]
+	Reading 'complex_solvated.prmtop' as Amber Topology
+	Radius Set: H(N)-modified Bondi radii (mbondi2)
+  [trajin complex_md1.mdcrd]
+TIME: Total execution time: 0.1347 seconds.
+
+Loading and checking parameter files for compatibility...
+cpptraj found! Using /home/weilan/anaconda3/envs/AmberTools20/bin/cpptraj
+sander found! Using /home/weilan/anaconda3/envs/AmberTools20/bin/sander
+Preparing trajectories for simulation...
+Error: 'fixed.mdcrd': No such file or directory
+Error: Could not set up input trajectory 'fixed.mdcrd'.
+Error: Error(s) occurred during execution.
+  File "/home/weilan/software/amber20/bin/MMPBSA.py", line 99, in <module>
+    app.file_setup()
+  File "/home/weilan/software/amber20/lib/python3.10/site-packages/MMPBSA_mods/main.py", line 155, in file_setup
+    self.numframes, self.numframes_nmode = make_trajectories(INPUT, FILES,
+  File "/home/weilan/software/amber20/lib/python3.10/site-packages/MMPBSA_mods/make_trajs.py", line 59, in make_trajectories
+    traj = Trajectory(FILES.solvated_prmtop, FILES.mdcrd, cpptraj)
+  File "/home/weilan/software/amber20/lib/python3.10/site-packages/MMPBSA_mods/make_trajs.py", line 467, in __init__
+    self.Query()
+  File "/home/weilan/software/amber20/lib/python3.10/site-packages/MMPBSA_mods/make_trajs.py", line 602, in Query
+    raise TrajError('%s failed when querying %s' % (self.exe, traj))
+TrajError: /home/weilan/anaconda3/envs/AmberTools20/bin/cpptraj failed when querying fixed.mdcrd
+
+Fatal Error! 
+All files have been retained for your error investigation: 
+You should begin by examining the output files of the first failed calculation.
+Consult the "Temporary Files" subsection of the MMPBSA.py chapter in the
+manual for file naming conventions.
+Cleaning temporary files and quitting.
+11.0
+11.0
+1-131
+131
+9
+132-140
+ERROR: Calculation halted.  Periodic box dimensions have changed too much from their initial values.
+  Your system density has likely changed by a large amount, probably from
+  starting the simulation from a structure a long way from equilibrium.
+
+  [Although this error can also occur if the simulation has blown up for some reason]
+
+  The GPU code does not automatically reorganize grid cells and thus you
+  will need to restart the calculation from the previous restart file.
+  This will generate new grid cells and allow the calculation to continue.
+  It may be necessary to repeat this restarting multiple times if your system
+  is a long way from an equilibrated density.
+
+  Alternatively you can run with the CPU code until the density has converged
+  and then switch back to the GPU code.
+
+Note: The following floating-point exceptions are signalling: IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+Note: The following floating-point exceptions are signalling: IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
+Note: The following floating-point exceptions are signalling: IEEE_UNDERFLOW_FLAG IEEE_DENORMAL
