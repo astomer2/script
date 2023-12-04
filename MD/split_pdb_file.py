@@ -56,7 +56,7 @@ def split_pdb_run(workpath):
 
 
 if __name__ == '__main__':
-    workpath = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/cyco/KYMAEYMYD/'
+    workpath = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/MD/cyco/KWMAEYMYD/'
     split_pdb_run(workpath)
 
 

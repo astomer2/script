@@ -449,7 +449,3 @@ if __name__ == "__main__":
 
     # 调用 simulation 函数
     simulation(work_path, parmter_file, cmap_path, cuda_device_id, induced_hydrogen, solvateions, CMAP, pepcyc, pepcys)
-
-
-
-    
