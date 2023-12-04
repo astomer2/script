@@ -43,7 +43,7 @@ def write_pdb_chain(chains, peptide, protein):
                 f.write(''.join(lines))
                 f.write('TER\n')  # 添加TER行，表示链的结束
 
-def main(workpath):
+def split_pdb_run(workpath):
     make_dirs(workpath)
     for root, dirs, files_names in os.walk(workpath):
         # 这里只关注文件夹路径
@@ -57,7 +57,7 @@ def main(workpath):
 
 if __name__ == '__main__':
     workpath = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/cyco/KYMAEYMYD/'
-    main(workpath)
+    split_pdb_run(workpath)
 
 
 '''

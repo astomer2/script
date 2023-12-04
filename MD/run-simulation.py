@@ -46,7 +46,7 @@ def reference_id(protein_structure):
     """
     with open(protein_structure) as f:
         lines = f.readlines()
-
+    protein_id = 0
     residue_count = 0
     prev_res_id = 0
     for line in lines:
@@ -94,7 +94,80 @@ def target_id(protein_id, peptide_structure):
     print (target)
     return target
 
-def sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, solvateions ,pepcyc):
+def identify_cys_id(peptide_structure):
+    """
+    This function takes in the path of a peptide structure file and identifies the residue IDs of all CYS or CYX residues in the file.
+
+    Parameters:
+    - peptide_structure (str): The path of the peptide structure file.
+
+    Returns:
+    - residue_ids (list): A list of integer residue IDs corresponding to the CYS or CYX residues found in the file.
+    """
+
+    cys_residue_ids = []
+    new_line = []
+    prev_id = 0
+    with open (peptide_structure) as f:
+        lines = f.readlines()
+    for line in lines:
+        if line.startswith('ATOM'):
+            residue = line[17:20]
+            if residue == 'CYS' or residue == 'CYX':
+                line = line[:17] + 'CYX' + line[20:]
+                new_line.append(line)
+                residue_id = line[22:26].strip()
+                if residue_id != prev_id:
+                    prev_id = residue_id
+                    cys_residue_ids.append(int(residue_id))
+            else :
+                new_line.append(line)
+    with open(peptide_structure, 'w') as f:
+        f.writelines(new_line)
+    return cys_residue_ids
+
+def change_cys_to_cyx(peptide_structure):
+    """
+    Change all occurrences of 'CYS' to 'CYX' in the given peptide structure file.
+
+    Parameters:
+    - peptide_structure (str): The path to the peptide structure file.
+
+    Returns:
+    - None
+
+    Raises:
+    - FileNotFoundError: If the peptide structure file does not exist.
+    """
+    with open (peptide_structure) as f:
+        lines = f.readlines()
+    for i, line in enumerate(lines):
+        if line.startswith('ATOM'):
+            residue = line[17:20]
+            if residue == 'CYS':
+                line = line[:17] + 'CYX' + line[20:]
+            lines[i] = line
+
+    with open (peptide_structure, 'w') as f:
+        f.writelines(lines)
+
+    
+
+def sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, solvateions ,pepcyc, pepcys):
+    """
+    Generate the solvated structure of a peptide-protein complex using tleap.
+
+    Parameters:
+    - peptide_structure (str): The path to the input PDB file containing the peptide structure.
+    - protein_structure (str): The path to the input PDB file containing the protein structure.
+    - induced_hydrogen (bool): Flag indicating whether to add induced hydrogen to the structures.
+    - solvateions (bool): Flag indicating whether to solvate the complex with water molecules and ions.
+    - pepcyc (bool): Flag indicating whether to perform pepcyc modifications on the peptide.
+    - pepcys (bool): Flag indicating whether to perform pepcys modifications on the peptide.
+
+    Returns:
+    None
+    """
     Volume = 0
     charge = 0
     ions =  0
@@ -146,6 +219,11 @@ def sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, solvatei
         f.write("peptide= loadpdbusingseq  " + peptide_structure + formatted_sequence +"\n")
         f.write("remove peptide peptide."+ str(sequence_lengths) +".OXT \n")
         f.write("bond peptide.1.N peptide."+ str(sequence_lengths) +".C \n")
+
+    if pepcys : 
+        cys_residue_ids  = identify_cys_id(peptide_structure)
+        f.write("peptide = loadpdb " + peptide_structure + "\n")
+        f.write("bond peptide."+ str(cys_residue_ids[0]) +".SG peptide."+ str(cys_residue_ids[1]) +".SG \n")
     else:
         f.write("peptide= loadpdb " + peptide_structure + "\n")
 
@@ -175,12 +253,21 @@ def sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, solvatei
 
     # call tleap to generate the file
     os.system("tleap -f "+work_path + "/"+"solvateions"+"_tleap.in")
-    os.system("rm "+work_path + "/"+"solvateions"+"_tleap.in")
-    os.system("rm "+work_path + "/"+"unsolvateions"+"_tleap.in")
+    #os.system("rm "+work_path + "/"+"solvateions"+"_tleap.in")
+    #os.system("rm "+work_path + "/"+"unsolvateions"+"_tleap.in")
 
     return
 
 def take_paramter_flie(parmter_file):
+    """
+    Copies all files with the extension '.in' from the specified parameter file directory to the working directory.
+
+    Parameters:
+        parmter_file (str): The path to the directory containing the parameter files.
+
+    Returns:
+        None
+    """
     for filename in os.listdir(parmter_file):
         if filename.endswith('.in'):
             source_path = os.path.join(parmter_file, filename)
@@ -189,6 +276,15 @@ def take_paramter_flie(parmter_file):
 
 
 def add_cmap_to_prmtop(cmap_path):
+    """
+    Adds cmap to the given prmtop file.
+
+    Args:
+        cmap_path (str): The path to the directory containing the cmap files.
+
+    Returns:
+        None
+    """
     cmap_para_file = f'{cmap_path}/ff14IDPSFF.para'
     #CAMP_scrpt = '/home/weilan/software/ADD-CMAP-master/ADD_CMAP.py'
     prmtop_files = ['peptide.prmtop', 'protein.prmtop', 'complex.prmtop', 'complex_solvated.prmtop']
@@ -206,6 +302,17 @@ def add_cmap_to_prmtop(cmap_path):
 
 
 def run_simulation(cuda_device_id ,CMAP ,cmap_path):
+    """
+    Runs a simulation using the specified CUDA device ID, CMAP flag, and CMAP path.
+
+    Parameters:
+        cuda_device_id (int): The ID of the CUDA device to use for the simulation.
+        CMAP (bool): A flag indicating whether to add CMAP to the PRMTOP file.
+        cmap_path (str): The path to the CMAP file.
+
+    Returns:
+        None
+    """
 
     os.environ["CUDA_VISIBLE_DEVICES"] = str(cuda_device_id)
     if CMAP :
@@ -229,6 +336,17 @@ def run_simulation(cuda_device_id ,CMAP ,cmap_path):
 
 
 def analysis(work_path, reference,target):
+    """
+    Generates a function comment for the given function body in a markdown code block with the correct language syntax.
+
+    Args:
+        work_path (str): The path of the work directory.
+        reference (str): The reference string.
+        target (str): The target string.
+
+    Returns:
+        None
+    """
     if CMAP :
         complex_prmtop = 'complex_solvated_CMAP.prmtop'
     else :
@@ -267,12 +385,12 @@ def analysis(work_path, reference,target):
     os.system("MMPBSA.py --clean")
 
 
-def simulation(work_path, parmter_file ,cmap_path , cuda_device_id, induced_hydrogen, solvateions, CMAP, pepcyc):
+def simulation(work_path, parmter_file ,cmap_path , cuda_device_id, induced_hydrogen, solvateions, CMAP, pepcyc, pepcys):
 
     os.chdir(work_path)
     peptide_structure = f'{work_path}/peptide.pdb'
     protein_structure = f'{work_path}/protein.pdb'
-    sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, solvateions, pepcyc)
+    sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, solvateions, pepcyc ,pepcys)
     take_paramter_flie(parmter_file)
     run_simulation(cuda_device_id, CMAP, cmap_path)
     protein_id ,reference = reference_id(protein_structure)
@@ -295,7 +413,7 @@ if __name__ == "__main__":
     parser.add_argument("-solv", "--solvateions",nargs='?', type=int, choices=[0, 1], default=1, help="Enable solvations, default is False")
     parser.add_argument("-CAMP", "--CMAP", nargs='?', type=int, choices=[0, 1], default=0, help="Enable CMAP, induced charmm36 parameters for Amber prmtop file, default is False")
     parser.add_argument("-cyc", "--pepcyc", nargs='?', type=int, choices=[0, 1], default=0, help="Enable pepcyc, Cyclize the first and last amino acids of the peptide if enabled, close CMAP, default is False")
-
+    parser.add_argument("-cys", "--pepcys", nargs='?', type=int, choices=[0, 1], default=0, help="Enable pepcys, Cyclize the one and another (anywhere) cysteine amino acids of the peptide if enabled, support CMAP, default is False")
     # 解析命令行参数
     args = parser.parse_args()
 
@@ -308,6 +426,7 @@ if __name__ == "__main__":
     solvateions = bool(args.solvateions)
     CMAP = bool(args.CMAP)
     pepcyc = bool(args.pepcyc)
+    pepcys = bool(args.pepcys)
 
     # 增加额外的判断
     if pepcyc and CMAP:
@@ -329,7 +448,7 @@ if __name__ == "__main__":
     conc = 0.15
 
     # 调用 simulation 函数
-    simulation(work_path, parmter_file, cmap_path, cuda_device_id, induced_hydrogen, solvateions, CMAP, pepcyc)
+    simulation(work_path, parmter_file, cmap_path, cuda_device_id, induced_hydrogen, solvateions, CMAP, pepcyc, pepcys)
 
 
 

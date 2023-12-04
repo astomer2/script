@@ -52,9 +52,9 @@ def find_sequences_and_rename(extracted_folder_base, cyclic_folder, pep_chain_id
         os.rename(file_path, outfile)
 
 if __name__ == "__main__":
-    sturcture_zip_path = '/mnt/nas1/lanwei-125/FGF5/remodel_generated_cycpeptide/output/'
-    extracted_folder_base = '/mnt/nas1/lanwei-125/FGF5/remodel_generated_cycpeptide/extracted/'
-    cyclic_folder = '/mnt/nas1/lanwei-125/FGF5/remodel_generated_cycpeptide/cyco/'
+    sturcture_zip_path = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/output/'
+    extracted_folder_base = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/MD/pos/'
+    cyclic_folder = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/MD/pos/'
     pep_chain_id = 'B'
-    #extract_zip_files(sturcture_zip_path, extracted_folder_base)
+    extract_zip_files(sturcture_zip_path, extracted_folder_base)
     find_sequences_and_rename(extracted_folder_base, cyclic_folder, pep_chain_id)
