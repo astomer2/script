@@ -401,8 +401,8 @@ def simulation(work_path, parmter_file ,cmap_path , cuda_device_id, induced_hydr
 if __name__ == "__main__":
     # 设置默认参数
     default_cuda_device_id = 0
-    default_parmter_file = "/mnt/sdc/lanwei/script-1/MD/amber_paramter_files"
-    default_cmap_path = "/mnt/sdc/lanwei/script-1/MD/CMAP_files"
+    default_parmter_file = "/mnt/nas1/software/MD/amber_paramter_files"
+    default_cmap_path = "/mnt/nas1/software/MD/CMAP_files"
     # 定义命令行参数
     parser = argparse.ArgumentParser(description="Run amber simulation with specified parameters, if no parameters are specified, default parameters will be used")
     parser.add_argument("-i", "--work_path", required=True, help="Path to the work directory, should have protein.pdb and peptide.pdb, must be required")
