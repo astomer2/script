@@ -172,13 +172,20 @@ def sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, solvatei
     charge = 0
     ions =  0
     if induced_hydrogen :
-        os.system("pdb4amber -y -i  " + protein_structure + "  -o " + protein_structure.split(".")[0] + "_h.pdb")
-        os.system("pdb4amber -y -i  "+ peptide_structure + "  -o " + peptide_structure.split(".")[0] + "_h.pdb")
+        rec_name = protein_structure.split(".")[0]
+        pep_name = peptide_structure.split(".")[0]
+
+        os.system("pdb4amber -y -i  " + protein_structure + "  -o " + rec_name + "_noh.pdb")
+        os.system("pdb4amber -y -i  "+ peptide_structure + "  -o " + pep_name + "_noh.pdb")
+        
+        #os.system("pdb4amber --add-missing-atoms -i  " +  rec_name + "_noh.pdb" + "  -o " + rec_name + "_h.pdb")
+        #os.system("pdb4amber --add-missing-atoms -i  "+ pep_name + "_noh.pdb" + "  -o " + pep_name + "_h.pdb")
+
         os.remove(protein_structure)
         os.remove(peptide_structure)
 
-        os.rename( protein_structure.split(".")[0] + "_h.pdb", protein_structure )
-        os.rename(peptide_structure.split(".")[0]+ "_h.pdb", peptide_structure )
+        os.rename( protein_structure.split(".")[0] + "_noh.pdb", protein_structure )
+        os.rename(peptide_structure.split(".")[0]+ "_noh.pdb", peptide_structure )
 
 
     if solvateions:
@@ -216,11 +223,11 @@ def sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, solvatei
     if pepcyc :
         sequences, sequence_lengths = extract_three_letter_code(peptide_structure)
         formatted_sequence = "{" + " ".join(sequences) + "}"
-        f.write("peptide= loadpdbusingseq  " + peptide_structure + formatted_sequence +"\n")
+        f.write("peptide= loadpdbusingseq  " + peptide_structure + " "+formatted_sequence +"\n")
         f.write("remove peptide peptide."+ str(sequence_lengths) +".OXT \n")
         f.write("bond peptide.1.N peptide."+ str(sequence_lengths) +".C \n")
 
-    if pepcys : 
+    elif  pepcys : 
         cys_residue_ids  = identify_cys_id(peptide_structure)
         f.write("peptide = loadpdb " + peptide_structure + "\n")
         f.write("bond peptide."+ str(cys_residue_ids[0]) +".SG peptide."+ str(cys_residue_ids[1]) +".SG \n")
@@ -407,13 +414,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run amber simulation with specified parameters, if no parameters are specified, default parameters will be used")
     parser.add_argument("-i", "--work_path", required=True, help="Path to the work directory, should have protein.pdb and peptide.pdb, must be required")
     parser.add_argument("-g", "--cuda_device_id", nargs='?',type=int, default=default_cuda_device_id, help="CUDA device ID,  default is 0")
-    parser.add_argument("-p", "--parmter_file", nargs='?', type=str, default=default_parmter_file, help="Path to the amber simulation parmter files, default is /mnt/sdc/lanwei/script-1/MD/amber_paramter_files,  must be required")
-    parser.add_argument("-c", "--CMAP_path", nargs='?',type=str, default=default_cmap_path, help="Path to the CMAP master path, default is /mnt/sdc/lanwei/script-1/MD/CMAP_files")
+    parser.add_argument("-p", "--parmter_file", nargs='?', type=str, default=default_parmter_file, help="Path to the amber simulation parmter files, default is /mnt/nas1/software/MD/amber_paramter_files,  must be required")
+    parser.add_argument("-c", "--CMAP_path", nargs='?',type=str, default=default_cmap_path, help="Path to the CMAP master path, default is /mnt/nas1/software/MD/CMAP_files")
     parser.add_argument("-hyd", "--induced_hydrogen", nargs='?',type=int, choices=[0, 1], default=1, help="Use pdb4amber to reduce oridnally hydrogen, then add amber format hydrogens, default is True")
-    parser.add_argument("-solv", "--solvateions",nargs='?', type=int, choices=[0, 1], default=1, help="Enable solvations, default is True")
-    parser.add_argument("-CAMP", "--CMAP", nargs='?', type=int, choices=[0, 1], default=0, help="Enable CMAP, induced charmm36 parameters for Amber prmtop file, default is False")
-    parser.add_argument("-cyc", "--pepcyc", nargs='?', type=int, choices=[0, 1], default=0, help="Enable pepcyc, Cyclize the first and last amino acids of the peptide if enabled, close CMAP, default is False")
-    parser.add_argument("-cys", "--pepcys", nargs='?', type=int, choices=[0, 1], default=0, help="Enable pepcys, Cyclize the one and another (anywhere) cysteine amino acids of the peptide if enabled, support CMAP, default is False")
+    parser.add_argument("-solv", "--solvateions",nargs='?', type=int, choices=[0, 1], default=1, help="If enable solvations, Add water, counterions, salt ions, and periodic boundary conditions to the structure's topology, default is True")
+    parser.add_argument("-CMAP", "--CMAP", nargs='?', type=int, choices=[0, 1], default=0, help="If enable CMAP, induced charmm36 parameters for Amber prmtop file, default is False")
+    parser.add_argument("-cyc", "--pepcyc", nargs='?', type=int, choices=[0, 1], default=0, help="If enable pepcyc, Connect any two amino acids at the beginning and end of a polypeptide so that their free amino and carboxyl groups form a peptide bond, must close CMAP, default is False")
+    parser.add_argument("-cys", "--pepcys", nargs='?', type=int, choices=[0, 1], default=0, help="If enable pepcys, Connect any two cysteines in a polypeptide whose distance is greater than 2.05 Angstroms to form a disulfide bond between their sulfhydryl groups, support CMAP, default is False")
     # 解析命令行参数
     args = parser.parse_args()
 
