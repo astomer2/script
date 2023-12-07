@@ -1,0 +1,1 @@
+nohup python peptide_utils/random_generate/random_generator.py > peptide_utils/random_generate/log.log 2>&1 &

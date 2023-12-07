@@ -62,7 +62,7 @@ def save_library_to_csv(data_frame, output_file):
     data_frame.to_csv(output_file, index=False)
     print(f"Library has been saved to {output_file}")
 
-def main():
+def main(fasta_file, output_file, peptide_lengths, peptide_offsets):
     peptide_sequences = read_fasta(fasta_file)
     # Generate and save peptide library to CSV
     peptide_library_df = generate_peptide_library(peptide_sequences, peptide_lengths, peptide_offsets)
@@ -75,3 +75,4 @@ if __name__ == "__main__":
     # Define peptide lengths and offsets
     peptide_lengths = [6, 7, 8, 9, 10]
     peptide_offsets = [1, 1, 1, 1, 1]
+    main(fasta_file, output_file, peptide_lengths, peptide_offsets)
