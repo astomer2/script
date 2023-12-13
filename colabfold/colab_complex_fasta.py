@@ -38,8 +38,8 @@ def main(protein_file, peptides_file, output_dir):
     print('Done. Output files written to', output_dir)
 
 if __name__ == '__main__':
-    protein_file = "/mnt/nas1/lanwei-125/FGF5/remodel_generated_cycpeptide/FGF5.fasta"
-    peptides_file = "/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/sequence.txt"
-    output_dir = "/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/input/"
+    protein_file = "/mnt/sdc/lanwei/TGF/CF_relax/input/TBR2.fasta"
+    peptides_file = "/mnt/sdc/lanwei/TGF/CF_relax/input/seq.txt"
+    output_dir = "/mnt/sdc/lanwei/TGF/CF_relax/input/"
     main(protein_file, peptides_file, output_dir)
 

@@ -32,6 +32,7 @@ class ABian:
         
         for item in self.make_dir_path:
             if not os.path.exists(item):
+                os.umask(0)
                 os.makedirs(item)
             else:
                 print("%s-->目录不为空，请检查！！！" % item)
@@ -50,11 +51,14 @@ class ABian:
 
     def execute_in_parallel(self, items):
         with multiprocessing.Pool(processes=self.repeat_times) as pool:
-            pool.map(self.executive, items)
+            pool.imap(self.executive, items)
 
     def run(self):
+        
         if not os.path.exists(self.work_path):
+            os.umask(0)
             os.makedirs(self.work_path)
+
         with open(self.txt_path, encoding='utf-8') as r_file:
             task_count = sum(1 for _ in r_file)  # Count the number of lines in the file
 
@@ -71,11 +75,7 @@ class ABian:
                         pbar.update(1)
                     self.make_dir_name.clear()
                     self.make_dir_path.clear()
-                    # Delete marker files
-                    #for item in self.make_dir_path:
-                    #    marker_file = os.path.join(item, ".executed")
-                    #    if os.path.exists(marker_file):
-                    #        os.remove(marker_file)
+
 
         print("\n***************程序运行完毕！！！***************")
         print("--结束时间：%s--\n" % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))

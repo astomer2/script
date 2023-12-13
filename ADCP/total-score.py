@@ -54,6 +54,6 @@ def write_result():
 
 if __name__ == '__main__':
     #path = os.getcwd()
-    path = '/mnt/nas1/lanwei-125/IL8/v4/ADCP/monomer/'
+    path = '/mnt/nas1/lanwei-125/CD44/docking/ADCP/'
     read_score()
     write_result()

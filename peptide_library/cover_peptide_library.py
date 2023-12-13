@@ -1,11 +1,11 @@
-import pandas as pd
+from collections import OrderedDict
 
 def read_fasta(file_path):
     """
     Read peptide sequences from a FASTA file.
 
     Parameters:
-    - file_path (str): Path to the input FASTA file.
+    - file_path (str): Path to the input FASTA or TXT file.
 
     Returns:
     - dict: Dictionary with peptide names as keys and sequences as values.
@@ -45,13 +45,14 @@ def generate_peptide_library(peptide_sequences, lengths, offsets):
         for length, offset in zip(lengths, offsets):
             for sequence in sequence_list:
                 for i in range(0, len(sequence) - length + 1, offset):
-                    peptide_name = f"{name}_{length}_{i}"
                     peptide_seq = sequence[i:i + length]
-                    data_to_append.append({"Peptide Name": peptide_name, "Peptide Sequence": peptide_seq})
+                    data_to_append.append( peptide_seq)
 
-    return pd.DataFrame(data_to_append)
+    unique_sequences = list(OrderedDict.fromkeys(data_to_append))  
 
-def save_library_to_csv(data_frame, output_file):
+    return unique_sequences
+
+def save_library_to_txt(unique_sequences, output_file):
     """
     Save DataFrame to a CSV file.
 
@@ -59,19 +60,23 @@ def save_library_to_csv(data_frame, output_file):
     - data_frame (pd.DataFrame): DataFrame to be saved.
     - output_file (str): Path to the output CSV file.
     """
-    data_frame.to_csv(output_file, index=False)
-    print(f"Library has been saved to {output_file}")
+    with open(output_file, 'w', newline='') as f:
+        for seq in unique_sequences:
+            f.write(f"{seq}\n")
+
 
 def main(fasta_file, output_file, peptide_lengths, peptide_offsets):
     peptide_sequences = read_fasta(fasta_file)
     # Generate and save peptide library to CSV
-    peptide_library_df = generate_peptide_library(peptide_sequences, peptide_lengths, peptide_offsets)
-    save_library_to_csv(peptide_library_df, output_file)
+    unique_sequences = generate_peptide_library(peptide_sequences, peptide_lengths, peptide_offsets)
+    save_library_to_txt(unique_sequences, output_file)
 
 if __name__ == "__main__":
     # Path to the FASTA file containing peptide sequences
-    fasta_file = r"path/to/your/peptide_sequences.fasta"
-    output_file = r"C:\Users\123\Desktop\jobwork\subject\PRL\overlap_library.csv"
+    fasta_file = '/mnt/nas1/lanwei-125/CD44/Structure/OPN/seq.txt'
+    # 传入的fasta中可以是一条序列，也可以是多条，但是需要规范写法
+
+    output_file = '/mnt/nas1/lanwei-125/CD44/Sequence/OPN.txt'
     # Define peptide lengths and offsets
     peptide_lengths = [6, 7, 8, 9, 10]
     peptide_offsets = [1, 1, 1, 1, 1]

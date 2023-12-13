@@ -1,6 +1,7 @@
 import os
 import csv
 import numpy as np
+import pandas as pd
 from modlamp.descriptors import GlobalDescriptor,PeptideDescriptor
 from collections import OrderedDict
 
@@ -149,7 +150,7 @@ def calculate_TI(sequences):
 
 
 
-def calculate_descriptors(input_file, output_file, columns_index):
+def calculate_descriptors(input_file, output_file, columns_index, sheet_name):
 
     sequences = []
     
@@ -166,7 +167,10 @@ def calculate_descriptors(input_file, output_file, columns_index):
         with open(input_file, 'r') as file:
             for line in file:
                 sequences.append(line.strip())
-                
+    elif input_file.endswith('.xlsx'):
+        # 读取XLSX
+        df = pd.read_excel(input_file, sheet_name=sheet_name, header=0)
+        sequences = df.iloc[:, columns_index].tolist()
     else:
         print("Unsupported file format!")
         return
@@ -263,10 +267,10 @@ def calculate_descriptors(input_file, output_file, columns_index):
 
 
 # 指定输入和输出文件的路径
-
-input_file = r"C:\Users\123\Desktop\jobwork\subject\IL-8\seq.txt"
-output_file = r"C:\Users\123\Desktop\jobwork\subject\IL-8\descriptor.csv"
-columns_index = 0
-
-# 计算描述符并保存结果到CSV文件
-calculate_descriptors(input_file, output_file, columns_index)
+if __name__ == "__main__":
+    input_file = '/mnt/nas1/lanwei-125/TGFbR2/TGFBR2-adcp-result-sort.xlsx'
+    output_file ='/mnt/nas1/lanwei-125/TGFbR2/TGFBR2-ph.csv'
+    columns_index = 0
+    sheet_name = 'phsical_properties'
+    # 计算描述符并保存结果到CSV文件
+    calculate_descriptors(input_file, output_file, columns_index, sheet_name)
