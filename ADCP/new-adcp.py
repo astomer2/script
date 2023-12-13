@@ -9,7 +9,7 @@ import multiprocessing
 from tqdm import tqdm  # Import tqdm for a progress bar
 
 class ABian:
-    def __init__(self, txt_path, config_file_path, model_num, num_steps, core_num, repeat_times, work_path):
+    def __init__(self, txt_path, config_file_path, model_num, num_steps, core_num, repeat_times, work_path, cyclic, cystein):
         print("*************程序开始执行*************")
         print("--start time:%s--\n" % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
         self.txt_path = txt_path
@@ -19,10 +19,16 @@ class ABian:
         self.core_num = core_num
         self.repeat_times = repeat_times
         self.work_path = work_path
-
+        self.cyclic = cyclic
+        self.cystein = cystein
     # 生成命令
     def create_executive(self, key):
-        self.executive_txt = f"adcp -t {self.config_file_path} -s {key} -N {self.model_num} -n {self.num_steps} -c {self.core_num} -o dock > log.txt"
+        if self.cyclic:
+            self.executive_txt = f"adcp -t {self.config_file_path} -s {key} -N {self.model_num} -n {self.num_steps} -c {self.core_num} -cyc -o dock > log.txt"
+        elif self.cystein:
+            self.executive_txt = f"adcp -t {self.config_file_path} -s {key} -N {self.model_num} -n {self.num_steps} -c {self.core_num} -cys -o dock > log.txt"
+        else:
+            self.executive_txt = f"adcp -t {self.config_file_path} -s {key} -N {self.model_num} -n {self.num_steps} -c {self.core_num} -o dock > log.txt"
 
     # 创建文件夹
     def make_dir(self, dir_name):
@@ -51,7 +57,7 @@ class ABian:
 
     def execute_in_parallel(self, items):
         with multiprocessing.Pool(processes=self.repeat_times) as pool:
-            pool.imap(self.executive, items)
+            pool.map(self.executive, items)
 
     def run(self):
         
@@ -89,9 +95,19 @@ def main():
     parser.add_argument("-p", "--core_num", type=int, required=True, help="Number of cores")
     parser.add_argument("-r", "--repeat_times", type=int, required=True, help="Repeat times")
     parser.add_argument("-w", "--work_path", required=True, help="Path to the work directory")
+    parser.add_argument(
+            '-cyc', "--cyclic", dest="cyclic", action="store_true",
+            default=False,
+            help="option for cyclic peptide through backbone")
+    parser.add_argument(
+            '-cys', "--cystein", dest="cystein", action="store_true",
+            default=False,
+            help="option for cyclic peptide through CYS-S-S-CYS")
+
+
     args = parser.parse_args()
 
-    abian = ABian(args.txt_path, args.config_file_path, args.model_num, args.num_steps, args.core_num, args.repeat_times, args.work_path)
+    abian = ABian(args.txt_path, args.config_file_path, args.model_num, args.num_steps, args.core_num, args.repeat_times, args.work_path, args.cyclic, args.cystein)
     abian.run()
 
 if __name__ == '__main__':
