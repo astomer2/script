@@ -2,7 +2,7 @@ import os
 from pdbfixer import PDBFixer
 from simtk.openmm.app import PDBFile
 
-def fixed_pdb_file(pdb_file, workdir):
+def fixed_pdb_file(pdb_file: str, workdir: str) -> str:
     """
     Generate a fixed PDB file.
 

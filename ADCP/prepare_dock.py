@@ -2,11 +2,7 @@ import os
 import sys
 sys.path.append(os.path.abspath('.'))
 from utils_peptide.pdb_fixer import fixed_pdb_file
-from utils_comm.log_util import get_logger
-import logging
 
-
-logger = get_logger(name=__name__, log_file=None, log_level=logging.INFO)
 
 def prepare_structure(protein, peptide, rec, lig):
     """
@@ -33,7 +29,7 @@ def prepare_structure(protein, peptide, rec, lig):
 
 
 if __name__ == "__main__":
-    protein = "/mnt/nas1/lanwei-125/FGF5/dock_prepare/FGF5.pdb"
+    protein = "/mnt/nas1/lanwei-125/TGFbR2/dock_prepare/TBR2.pdb"
     peptide = ""
     rec = True
     lig = False
