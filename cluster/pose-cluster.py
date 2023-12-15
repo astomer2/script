@@ -2,15 +2,27 @@ import os
 import numpy as np
 
 import hdbscan
+from pathlib import Path
 from hdbscan import validity
 from sklearn.manifold import TSNE
 from tqdm import tqdm
 from joblib import Parallel, delayed
+import logging
+import time
+import random
+import math
 
 import multiprocessing as mp
 import matplotlib.pyplot as plt
 from shutil import copyfile
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+now_times = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
 # Read protein PDB and extract coordinates
 def read_protein(protein_pdb):
@@ -31,7 +43,7 @@ def read_protein(protein_pdb):
                 y = float(line[38:46])
                 z = float(line[46:54])
                 protein_coords.append([x, y, z])
-    print(len(protein_coords))
+    logger.info(f"Read protein {len(protein_coords)} atom coordinates from PDB file.")
     return protein_coords
 
 
@@ -50,19 +62,18 @@ def read_peptide(peptide_pdb_dir):
     """
     peptide_coords = []
     peptide_names = []
-    for pdb in os.listdir(peptide_pdb_dir):
-        if pdb.endswith(".pdb"):
-            coords = []
-            with open(os.path.join(peptide_pdb_dir, pdb)) as f:
-                for line in f:
-                    if line.startswith("ATOM"):
-                        x = float(line[30:38])
-                        y = float(line[38:46])
-                        z = float(line[46:54])
-                        coords.append([x, y, z])
-            peptide_coords.append(coords)
-            peptide_names.append(pdb.split(".")[0])
-    print(len(peptide_coords))
+    for pdb_path in Path(peptide_pdb_dir).glob("*.pdb"):
+        coords = []
+        with open(pdb_path) as f:
+            for line in f:
+                if line.startswith("ATOM"):
+                    x = float(line[30:38])
+                    y = float(line[38:46])
+                    z = float(line[46:54])
+                    coords.append([x, y, z])
+        peptide_coords.append(coords)
+        peptide_names.append(pdb_path.stem)
+    logger.info(f'{now_times}: read {len(peptide_coords)} peptides')
     return peptide_coords, peptide_names
 
 
@@ -87,10 +98,8 @@ def calc_contacts(peptide_idx, peptide_coords, protein_coords, contact_cutoff):
             dist = np.linalg.norm(np.array(p_coord) - np.array(pe_coord))
             if dist < contact_cutoff:
                 contact += 1
-                # break
-
         dists[p_idx] = contact
-
+    
     return dists
 
 
@@ -106,7 +115,6 @@ def mutiprocessing(peptide_coords, protein_coords, contact_cutoff):
         list: A list of contact matrices for each peptide coordinate.
     """
     contact_matrices = []
-
     with mp.Pool() as pool:
         results = [
             pool.apply_async(
@@ -115,8 +123,8 @@ def mutiprocessing(peptide_coords, protein_coords, contact_cutoff):
             for i in range(len(peptide_coords))
         ]
         contact_matrices = [r.get() for r in results]
-    print(len(contact_matrices))
 
+    logger.info(f'{now_times} cutoff:{contact_cutoff} contact_matrices length: {len(contact_matrices)}')
     return contact_matrices
 
 
@@ -136,6 +144,7 @@ def caculate_contact_matrix(contact_matrices):
         contact_matrixs.append(dists)
     contact_matrixs = np.array(contact_matrixs)
 
+    logger.info(f"contact_matrices length: {len(contact_matrices)}")
     return contact_matrixs
 
 
@@ -169,16 +178,13 @@ def cluster_contact_matrix(contact_matrixs,DBCV_score_vs_trials):
             core_dist_n_jobs=-1,
         ).fit(contact_matrixs)
         score = hdb.relative_validity_
-
         return hdb, score
 
-    # Define the parameter ranges
     min_cluster_sizes = list(range(2, 5))
     min_samples_values = list(range(2, 5))
     eps_values = [x * 0.1 for x in range(1, 10, 2)]
     cluster_selection_methods = ["eom", "leaf"]
 
-    # Generate all combinations of parameters
     param_combinations = [
         (min_cluster_size, min_samples, eps, cluster_selection_method)
         for min_cluster_size in min_cluster_sizes
@@ -187,26 +193,22 @@ def cluster_contact_matrix(contact_matrixs,DBCV_score_vs_trials):
         for cluster_selection_method in cluster_selection_methods
     ]
 
-    # Run in parallel and track progress with tqdm
     results = Parallel(n_jobs=-1)(
         delayed(run_hdbscan)(params) for params in tqdm(param_combinations)
     )
 
-    # Store results in the scores dictionary
     for hdb, score in results:
         scores[hdb] = score
 
-    # Plotting
     plt.plot(list(range(len(scores))), scores.values())
     plt.xlabel("Trials")
     plt.ylabel("DBCV Score")
     plt.title("DBCV Score vs Trials")
     plt.savefig(DBCV_score_vs_trials)
 
-    # Get the best model based on the maximum score
     best_model = max(scores, key=scores.get)
 
-    print(f"Best Model: {best_model}, Score: {scores[best_model]}")
+    logger.info(f"{now_times} Best Model: {best_model}, Score: {scores[best_model]}")
 
     return best_model
 
@@ -222,12 +224,10 @@ def cluster(best_model, contact_matrixs):
     Returns:
         list: The labels assigned to each contact matrix after clustering.
     """
-    
     hdb = best_model.fit(contact_matrixs)
     labels = hdb.labels_
     score = hdb.relative_validity_
-    print(best_model,score)
-
+    logger.info(f'{now_times} Best Model: {best_model}, Score: {score}')
     return labels
 
 
@@ -259,7 +259,7 @@ def show_cluster(labels, peptide_names, cluster_result):
             f.write(
                 f"Cluster {label}:{cluster_keys[label]}\n {len(cluster_keys[label])}\n"
             )
-
+    logger.info(f"{now_times} Cluster information saved to {cluster_result}")
     return cluster_keys
 
 
@@ -278,44 +278,74 @@ def draw_2d_tsne(contact_matrixs, labels, cluster_keys, point_plot):
     """
     tsne = TSNE(n_components=2, perplexity=5, random_state=42)
     X_tsne = tsne.fit_transform(contact_matrixs)
-    # 2D散点图
     fig, ax = plt.subplots()
-
     for i in range(len(cluster_keys)):
         ax.scatter(
             X_tsne[labels == i, 0],
             X_tsne[labels == i, 1],
         )
     plt.savefig(point_plot)
+    logger.info(f"{now_times} 2D t-SNE plot saved to {point_plot}")
 
+# 从聚类中提取随机蛋白，不包含噪音类(label_tag : -1)
+def extract_random_peptides(cluster_keys, random_peptides):
+    """
+    Extracts a specified number of random peptides from a collection of cluster keys.
+    
+    Parameters:
+        cluster_keys (dict): A dictionary mapping labels to lists of peptides. The keys represent the labels of the clusters, and the values represent the peptides in each cluster.
+        random_peptides (int): The number of random peptides to extract.
+        
+    Returns:
+        dict: A dictionary mapping labels to lists of randomly selected peptides. The keys represent the labels of the clusters, and the values represent the randomly selected peptides from each cluster.
+    """
+    real_cluster = {}
+    for i in range(0,len(cluster_keys)-1):
+        a= cluster_keys[i]
+        real_cluster[i] = a  
+
+    total_peptides = sum(len(peptides) for peptides in real_cluster.values())
+    weights = {label: len(peptides) / total_peptides for label, peptides in real_cluster.items()}
+    peptides_to_extract = {label: math.ceil(random_peptides * weight) for label, weight in weights.items()}
+
+    selected_peptides = {}
+    for label, peptides in real_cluster.items():
+        selected_peptides[label] = random.sample(peptides, peptides_to_extract[label])
+        
+    real_random_peptides = sum(len(peptides) for peptides in selected_peptides.values())
+    logger.info(f"{now_times} {real_random_peptides} peptides are randomly selected")
+
+    return selected_peptides
 
 # 将聚类中的最优多肽提取出来
-def score_cluster(cluster_keys, peptide_pdb_dir, cluster_path):
+def score_cluster(cluster_keys, peptide_pdb_dir, HPEP, ADCP):
     """
-    Calculate the minimum score and corresponding peptide for each cluster label.
-
-    Parameters:
-    - cluster_keys (dict): A dictionary containing cluster labels as keys and a list of peptides as values.
-    - cluster_path (str): The path to the directory where the cluster directories will be created.
-
+    Calculate the minimum scores for each cluster label.
+    
+    Args:
+        cluster_keys (dict): A dictionary mapping cluster labels to lists of peptides.
+        peptide_pdb_dir (str): The directory where the peptide PDB files are stored.
+        HPEP (bool): A flag indicating whether HPEP is True or False.
+        ADCP (bool): A flag indicating whether ADCP is True or False.
+        
     Returns:
-    - min_scores (dict): A dictionary containing cluster labels as keys and a tuple of the minimum peptide and its corresponding score as values.
-
-    Raises:
-    - FileNotFoundError: If the PDB file for a peptide does not exist.
+        dict: A dictionary mapping cluster labels to tuples containing the peptide with the minimum score and the minimum score itself.
     """
+
     min_scores = {}
     for label, peptides in cluster_keys.items():
         min_score = float("inf")
         min_peptide = None
         for peptide in peptides:
-            pdb_file = os.path.join(peptide_pdb_dir, peptide + ".pdb")
+            pdb_file = Path(peptide_pdb_dir) / f"{peptide}.pdb"
             with open(pdb_file) as f:
                 for line in f:
-                    if HPEP :
+                    if HPEP:
                         score_marker = "REMARK ITScore"
-                    else :
+                    elif ADCP:
                         score_marker = "REMARK SCORE"
+                    else:   
+                        break
                     if line.startswith(score_marker):
                         score = float(line.split()[-1])
                         if score < min_score:
@@ -323,22 +353,50 @@ def score_cluster(cluster_keys, peptide_pdb_dir, cluster_path):
                             min_peptide = peptide
         min_scores[label] = (min_peptide, min_score)
 
-    dir_list = []
+    logger.info(f"{now_times} Minimum scores calculated for each cluster label")
 
-    for label, (peptide, score) in min_scores.items():
+    return min_scores
 
-        cluster_dir = os.path.join(cluster_path, "cluster_{}".format(label))
-        dir_list.append(cluster_dir)
+def get_peptide_pdb_dir(peptide_dict, cluster_path):
+    """
+    Generates the directory structure and copies PDB files for each peptide in the peptide dictionary to the specified cluster path.
 
-        if not os.path.exists(cluster_dir):
-            os.makedirs(cluster_dir, exist_ok=True)
+    Args:
+        peptide_dict (dict): A dictionary containing peptide labels as keys and tuples of peptide names and other information as values.
+        cluster_path (str): The path to the cluster directory where the peptide PDB files will be copied.
 
-        src_pdb = os.path.join(peptide_pdb_dir, peptide + ".pdb")
-        dst_pdb = os.path.join(cluster_dir, peptide + ".pdb")
+    Returns:
+        None
 
-        if not os.path.exists(dst_pdb):
-            copyfile(src_pdb, dst_pdb)
+    Raises:
+        None
+    """
 
+    cluster_dir_list = []
+    for labels, value  in peptide_dict.items():
+        if isinstance(value, tuple):
+            peptides,_ = value
+        else:
+            peptides = value
+
+        labels = str(labels)
+        for label in labels:
+            for peptide in peptides:
+            
+                cluster_dir = Path(cluster_path) / f"cluster_{label}"
+                cluster_dir_list.append(cluster_dir)
+
+                if not cluster_dir.exists():
+                    cluster_dir.mkdir(parents=True, exist_ok=True)
+
+                original_pdb = Path(peptide_pdb_dir) / f"{peptide}.pdb"
+                clustered_pdb = cluster_dir / f"{peptide}.pdb"
+
+                if not clustered_pdb.exists():
+                    copyfile(original_pdb, clustered_pdb)
+
+
+    logger.info(f"{now_times} Clustered PDB files saved to {cluster_dir_list}")
 
 def merge_pdb(cluster_keys, cluster_path):
     """
@@ -359,30 +417,29 @@ def merge_pdb(cluster_keys, cluster_path):
     for cluster_label_pdb in cluster_labels_pdb:
         i = 0
         a = a + 1
-        # 定义输出pdb文件名
-        out_file = os.path.join(cluster_path, f"{a}.pdb")
+        # Define output pdb filename
+        out_file = Path(cluster_path) / f"{a}.pdb"
 
         for pdb in cluster_label_pdb:
-            pdb_file = os.path.join(peptide_pdb_dir, pdb + ".pdb")
-            with open(out_file, "a") as f_out:
-                with open(pdb_file) as f_in:
-                    i = i + 1
-                    f_out.write(f"\nMODEL {i}\n")
-                    # 过滤掉MODEL/END/ENDMDL行
-                    lines = [
-                        line
-                        for line in f_in
-                        if "MODEL" not in line
-                        and "END" not in line
-                        and "ENDMDL" not in line
-                    ]
-                    f_out.write("".join(lines))
-                    f_out.write(f_in.read())
-                    f_out.write("END\n")
-                    f_out.write("ENDMDL\n\n")
+            pdb_file = Path(peptide_pdb_dir) / f"{pdb}.pdb"
+            with open(out_file, "a") as f_out, open(pdb_file) as f_in:
+                i = i + 1
+                f_out.write(f"\nMODEL {i}\n")
+                # Filter out MODEL/END/ENDMDL lines
+                lines = [
+                    line
+                    for line in f_in
+                    if "MODEL" not in line
+                    and "END" not in line
+                    and "ENDMDL" not in line
+                ]
+                f_out.write("".join(lines))
+                f_out.write(f_in.read())
+                f_out.write("END\n")
+                f_out.write("ENDMDL\n\n")
+    logger.info(f"{now_times} Clustered PDB files saved to {cluster_path}")
 
-
-def main():
+def main(protein_pdb, peptide_pdb_dir, cluster_path , random_peptides):
     """
     Generate a plot and result file for cluster analysis.
 
@@ -402,9 +459,8 @@ def main():
     Returns:
     None
     """
-    DBCV_score_vs_trials = f"{cluster_path}/DBCV_score_vs_trials.png"
-    point_plot = f"{cluster_path}/cluster_point_plot.png"
-    cluster_result = f"{cluster_path}/cluster_result.txt"
+    os.umask(0)
+    os.makedirs(cluster_path, exist_ok=True)
 
     protein_coords = read_protein(protein_pdb)
     peptide_coords, peptide_names = read_peptide(peptide_pdb_dir)
@@ -412,22 +468,36 @@ def main():
     contact_matrices = mutiprocessing(peptide_coords, protein_coords, contact_cutoff)
     contact_matrixs = caculate_contact_matrix(contact_matrices)
 
+    DBCV_score_vs_trials = cluster_path / "DBCV_score_vs_trials.png"
     best_model = cluster_contact_matrix(contact_matrixs, DBCV_score_vs_trials)
+
+    cluster_result = cluster_path / "cluster_result.txt"
     labels = cluster(best_model, contact_matrixs)
     cluster_keys = show_cluster(labels, peptide_names, cluster_result)
 
-    score_cluster(cluster_keys, peptide_pdb_dir, cluster_path)
+    # 现在提取出的多肽不包括噪音类，也就是会少一个类
+    if HPEP or ADCP:
+        min_scores = score_cluster(cluster_keys, peptide_pdb_dir, HPEP, ADCP)
+    else:
+        min_scores = extract_random_peptides(cluster_keys, random_peptides)
+    get_peptide_pdb_dir(min_scores, cluster_path)
+    
+    point_plot = cluster_path / "cluster_point_plot.png"
     draw_2d_tsne(contact_matrixs, labels, cluster_keys, point_plot)
+
     merge_pdb(cluster_keys, cluster_path)
 
 
 if __name__ == "__main__":
-    protein_pdb = "/mnt/nas1/lanwei-125/PRLR/PRLR.pdb"
-    peptide_pdb_dir = "/mnt/nas1/lanwei-125/PRLR/HPEP/hpep-result/"
-    cluster_path = "/mnt/nas1/lanwei-125/PRLR/HPEP/cluster/"
+    protein_pdb = "/mnt/nas1/lanwei-125/FGF5/dock_prepare/FGF5.pdb"
+    peptide_pdb_dir = "/mnt/nas1/lanwei-125/FGF5/disulfide_peptide/"
+    cluster_path = "/mnt/nas1/lanwei-125/FGF5/disulfide_peptide_cluster/"
 
-    HPEP = True  # if your structures are from HPEP, set it to True, else set it to False
+    HPEP = False  # if your structures are from HPEP, set it to True, else set it to False
+    ADCP = False  # if your structures are from ADCP, set it to True, else set it to False
+
+    random_peptides = 50 #if HPEP and ADCP is False, set it to the number of random peptides you want
     contact_cutoff = 7  # 6 angstroms
 
-    main()
+    main(protein_pdb, peptide_pdb_dir, cluster_path , random_peptides)
     print("done")
