@@ -249,28 +249,28 @@ def show_cluster(labels, peptide_names, cluster_result):
     :rtype: Dict
 
     """
-    cluster_keys = {}
+    HDB_cluster_dict = {}
     for label in set(labels):
-        cluster_keys[label] = []
+        HDB_cluster_dict[label] = []
     for i, label in enumerate(labels):
-        cluster_keys[label].append(peptide_names[i])
-    for label in sorted(cluster_keys):
+        HDB_cluster_dict[label].append(peptide_names[i])
+    for label in sorted(HDB_cluster_dict):
         with open(cluster_result, "a+") as f:
             f.write(
-                f"Cluster {label}:{cluster_keys[label]}\n {len(cluster_keys[label])}\n"
+                f"Cluster {label}:{HDB_cluster_dict[label]}\n {len(HDB_cluster_dict[label])}\n"
             )
     logger.info(f"{now_times} Cluster information saved to {cluster_result}")
-    return cluster_keys
+    return HDB_cluster_dict
 
 
-def draw_2d_tsne(contact_matrixs, labels, cluster_keys, point_plot):
+def draw_2d_tsne(contact_matrixs, labels, HDB_cluster_dict, point_plot):
     """
     Generate a 2D t-SNE plot for the given contact matrix data.
 
     Parameters:
     - contact_matrixs (numpy array): An array of contact matrix data.
     - labels (numpy array): An array of labels corresponding to each data point.
-    - cluster_keys (list): A list of cluster keys.
+    - HDB_cluster_dict (list): A list of cluster keys.
     - point_plot (str): The path to save the generated plot.
 
     Returns:
@@ -279,7 +279,7 @@ def draw_2d_tsne(contact_matrixs, labels, cluster_keys, point_plot):
     tsne = TSNE(n_components=2, perplexity=5, random_state=42)
     X_tsne = tsne.fit_transform(contact_matrixs)
     fig, ax = plt.subplots()
-    for i in range(len(cluster_keys)):
+    for i in range(len(HDB_cluster_dict)):
         ax.scatter(
             X_tsne[labels == i, 0],
             X_tsne[labels == i, 1],
@@ -288,20 +288,20 @@ def draw_2d_tsne(contact_matrixs, labels, cluster_keys, point_plot):
     logger.info(f"{now_times} 2D t-SNE plot saved to {point_plot}")
 
 # 从聚类中提取随机蛋白，不包含噪音类(label_tag : -1)
-def extract_random_peptides(cluster_keys, random_peptides):
+def extract_random_peptides(HDB_cluster_dict, random_peptides):
     """
     Extracts a specified number of random peptides from a collection of cluster keys.
     
     Parameters:
-        cluster_keys (dict): A dictionary mapping labels to lists of peptides. The keys represent the labels of the clusters, and the values represent the peptides in each cluster.
+        HDB_cluster_dict (dict): A dictionary mapping labels to lists of peptides. The keys represent the labels of the clusters, and the values represent the peptides in each cluster.
         random_peptides (int): The number of random peptides to extract.
         
     Returns:
         dict: A dictionary mapping labels to lists of randomly selected peptides. The keys represent the labels of the clusters, and the values represent the randomly selected peptides from each cluster.
     """
     real_cluster = {}
-    for i in range(0,len(cluster_keys)-1):
-        a= cluster_keys[i]
+    for i in range(0,len(HDB_cluster_dict)-1):
+        a= HDB_cluster_dict[i]
         real_cluster[i] = a  
 
     total_peptides = sum(len(peptides) for peptides in real_cluster.values())
@@ -318,12 +318,12 @@ def extract_random_peptides(cluster_keys, random_peptides):
     return selected_peptides
 
 # 将聚类中的最优多肽提取出来
-def score_cluster(cluster_keys, peptide_pdb_dir, HPEP, ADCP):
+def score_cluster(HDB_cluster_dict, peptide_pdb_dir, HPEP, ADCP):
     """
     Calculate the minimum scores for each cluster label.
     
     Args:
-        cluster_keys (dict): A dictionary mapping cluster labels to lists of peptides.
+        HDB_cluster_dict (dict): A dictionary mapping cluster labels to lists of peptides.
         peptide_pdb_dir (str): The directory where the peptide PDB files are stored.
         HPEP (bool): A flag indicating whether HPEP is True or False.
         ADCP (bool): A flag indicating whether ADCP is True or False.
@@ -333,7 +333,7 @@ def score_cluster(cluster_keys, peptide_pdb_dir, HPEP, ADCP):
     """
 
     min_scores = {}
-    for label, peptides in cluster_keys.items():
+    for label, peptides in HDB_cluster_dict.items():
         min_score = float("inf")
         min_peptide = None
         for peptide in peptides:
@@ -398,28 +398,26 @@ def get_peptide_pdb_dir(peptide_dict, cluster_path):
 
     logger.info(f"{now_times} Clustered PDB files saved to {cluster_dir_list}")
 
-def merge_pdb(cluster_keys, cluster_path):
+def merge_pdb(HDB_cluster_dict, cluster_path):
     """
     Merge the PDB files associated with the given cluster keys and save the merged PDB file.
 
     Parameters:
-        cluster_keys (dict): A dictionary containing the cluster keys as keys and the PDB files associated with each key as values.
+        HDB_cluster_dict (dict): A dictionary containing the cluster keys as keys and the PDB files associated with each key as values.
         cluster_path (str): The path to the directory where the merged PDB file will be saved.
 
     Returns:
         None
     """
-    cluster_labels_pdb = []
-    for cluster_labels_keys in cluster_keys.keys():
-        cluster_labels_pdb.append(cluster_keys[cluster_labels_keys])
+    cluster_label_pdbs = []
+    cluster_laber_tags = []
+    for cluster_labels_keys in HDB_cluster_dict.keys():
+        cluster_laber_tags.append(int(cluster_labels_keys))
+        cluster_label_pdbs.append(HDB_cluster_dict[cluster_labels_keys])
 
-    a = 0
-    for cluster_label_pdb in cluster_labels_pdb:
+    for cluster_label_pdb, cluster_laber_tag in zip(cluster_label_pdbs, cluster_laber_tags):
+        out_file = Path(cluster_path) / f"{cluster_laber_tag}.pdb"
         i = 0
-        a = a + 1
-        # Define output pdb filename
-        out_file = Path(cluster_path) / f"{a}.pdb"
-
         for pdb in cluster_label_pdb:
             pdb_file = Path(peptide_pdb_dir) / f"{pdb}.pdb"
             with open(out_file, "a") as f_out, open(pdb_file) as f_in:
@@ -436,7 +434,7 @@ def merge_pdb(cluster_keys, cluster_path):
                 f_out.write("".join(lines))
                 f_out.write(f_in.read())
                 f_out.write("END\n")
-                f_out.write("ENDMDL\n\n")
+                f_out.write("ENDMDL\n\n")    
     logger.info(f"{now_times} Clustered PDB files saved to {cluster_path}")
 
 def main(protein_pdb, peptide_pdb_dir, cluster_path , random_peptides):
@@ -459,6 +457,10 @@ def main(protein_pdb, peptide_pdb_dir, cluster_path , random_peptides):
     Returns:
     None
     """
+    protein_pdb = Path(protein_pdb)
+    peptide_pdb_dir = Path(peptide_pdb_dir)
+    cluster_path = Path(cluster_path)
+
     os.umask(0)
     os.makedirs(cluster_path, exist_ok=True)
 
@@ -473,19 +475,19 @@ def main(protein_pdb, peptide_pdb_dir, cluster_path , random_peptides):
 
     cluster_result = cluster_path / "cluster_result.txt"
     labels = cluster(best_model, contact_matrixs)
-    cluster_keys = show_cluster(labels, peptide_names, cluster_result)
+    HDB_cluster_dict = show_cluster(labels, peptide_names, cluster_result)
 
     # 现在提取出的多肽不包括噪音类，也就是会少一个类
     if HPEP or ADCP:
-        min_scores = score_cluster(cluster_keys, peptide_pdb_dir, HPEP, ADCP)
+        select_peptides = score_cluster(HDB_cluster_dict, peptide_pdb_dir, HPEP, ADCP)
     else:
-        min_scores = extract_random_peptides(cluster_keys, random_peptides)
-    get_peptide_pdb_dir(min_scores, cluster_path)
+        select_peptides = extract_random_peptides(HDB_cluster_dict, random_peptides)
+    get_peptide_pdb_dir(select_peptides, cluster_path)
     
     point_plot = cluster_path / "cluster_point_plot.png"
-    draw_2d_tsne(contact_matrixs, labels, cluster_keys, point_plot)
+    draw_2d_tsne(contact_matrixs, labels, HDB_cluster_dict, point_plot)
 
-    merge_pdb(cluster_keys, cluster_path)
+    merge_pdb(HDB_cluster_dict, cluster_path)
 
 
 if __name__ == "__main__":
