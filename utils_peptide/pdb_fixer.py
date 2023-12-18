@@ -1,8 +1,9 @@
 import os
 from pdbfixer import PDBFixer
+from pathlib import Path
 from simtk.openmm.app import PDBFile
 
-def fixed_pdb_file(pdb_file: str, workdir: str) -> str:
+def fixed_pdb_file(pdb_file, workdir) :
     """
     Generate a fixed PDB file.
 
@@ -13,10 +14,10 @@ def fixed_pdb_file(pdb_file: str, workdir: str) -> str:
     Returns:
         a fixed PDB file with the same name as the input PDB file.
     """
-    _, complex_name = os.path.split(pdb_file)
-    complex_fixed_pdb = os.path.join(workdir, complex_name)
+    complex_fixed_pdb = Path(workdir) / Path(pdb_file).name
 
-    fixer = PDBFixer(filename= complex_fixed_pdb)
+
+    fixer = PDBFixer(filename= str(complex_fixed_pdb))
 
     fixer.findMissingResidues()
     fixer.findNonstandardResidues()

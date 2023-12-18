@@ -29,7 +29,8 @@ class ABian:
             self.executive_txt = f"adcp -t {self.config_file_path} -s {key} -N {self.model_num} -n {self.num_steps} -c {self.core_num} -cys -o dock > log.txt"
         else:
             self.executive_txt = f"adcp -t {self.config_file_path} -s {key} -N {self.model_num} -n {self.num_steps} -c {self.core_num} -o dock > log.txt"
-            
+        
+
 
     # 创建文件夹
     def make_dir(self, dir_name):

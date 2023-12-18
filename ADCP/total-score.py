@@ -1,59 +1,65 @@
+from dataclasses import dataclass
+from pathlib import Path
 import os
 import numpy as np
 
-def read_score():
-    score_file = open(path + '/score.txt', 'w')
-    score_file.write('name\tscore\n')
-    for root, dirs, files in os.walk(path):
-        for dir in dirs:
-            sub_path = os.path.join(root, dir)
-            if 'log.txt' not in os.listdir(sub_path):
-                continue
-            log_file = open(sub_path + '/log.txt', 'r')
-            if sum(1 for line in log_file) < 25:
-                print(f'your docking job {dir} was failed,please cheak or rerun')
-                continue
-            log_file.seek(0)
-            lines = log_file.readlines()
-            for i in range(14, 25):
-                if lines[i].split()[0] == '1':
-                    score = lines[i].split()[1]
-                    break
-            score_line = dir + '\t' + score + '\n'
-            score_file.write(score_line)
-    score_file.close()
+@dataclass
+class DockingResult:
+    name: str
+    score: float
 
-def write_result():
-    with open(path + '/score.txt', "r") as f:
-        lines = f.readlines()
+def read_score(log_path: Path, docking_results: list):
+    score_file_path = log_path / 'score.txt'
+
+    with score_file_path.open('w') as score_file:
+        score_file.write('name\tscore\n')
+
+        for subdir in log_path.iterdir():
+            if subdir.is_dir() and 'log.txt' in os.listdir(subdir):
+                log_file_path = subdir / 'log.txt'
+
+                if sum(1 for _ in log_file_path.open()) < 25:
+                    print(f'Your docking job {subdir.name} failed, please check or rerun')
+                    continue
+
+                with log_file_path.open('r') as log_file:
+                    lines = log_file.readlines()
+
+                    for i in range(14, 25):
+                        if lines[i].split()[0] == '1':
+                            score = float(lines[i].split()[1])
+                            docking_results.append(DockingResult(subdir.name, score))
+                            break
+
+        for docking_result in docking_results:
+            score_file.write(f'{docking_result.name}\t{docking_result.score}\n')
+    return docking_results
+
+def write_result(result_path: Path, docking_results: list):
     name_score_dict = {}
-    for line in lines:
-        data = line.strip().split()
-        if len(data) != 2:
-            continue
-        name, score = data
-        try:
-            score = float(score)
-        except ValueError:
-            continue
-        name = name.split("-")[0]
+
+    for docking_result in docking_results:
+        name = docking_result.name.split("-")[0]
         if name not in name_score_dict:
             name_score_dict[name] = []
-        name_score_dict[name].append(score)
+        name_score_dict[name].append(docking_result.score)
 
-    with open(path + "/result.txt", "w") as f:
-        f.write("sequence\tmix\tmax\tavg\tmed\tvar\n")
+    result_file_path = result_path / "result.txt"
+
+    with result_file_path.open("w") as result_file:
+        result_file.write("sequence\tmix\tmax\tavg\tmed\tvar\n")
+
         for name, scores in name_score_dict.items():
-            min =  np.min(scores)
-            max = np.max(scores)
-            med = np.median(scores)
-            avg = np.mean(scores)
-            var = np.var(scores)
-    #        d = b/a + 2.5 * (variance_b/a)**0.5
-            f.write(f"{name.upper()}\t{min}\t{max}\t{avg:.2f}\t{med:.2f}\t{var:.2f}\n")
+            min_score = np.min(scores)
+            max_score = np.max(scores)
+            med_score = np.median(scores)
+            avg_score = np.mean(scores)
+            var_score = np.var(scores)
+
+            result_file.write(f"{name.upper()}\t{min_score}\t{max_score}\t{avg_score:.2f}\t{med_score:.2f}\t{var_score:.2f}\n")
 
 if __name__ == '__main__':
-    #path = os.getcwd()
-    path = '/mnt/nas1/lanwei-125/CD44/docking/ADCP/'
-    read_score()
-    write_result()
+    path = Path('/mnt/nas1/lanwei-125/FGF5/FGF5_disulfied_sequence_dock/')
+    docking_results = []
+    docking_results = read_score(path, docking_results)
+    write_result(path, docking_results)

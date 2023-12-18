@@ -1,5 +1,6 @@
 import os 
 import sys
+from pathlib import Path
 sys.path.append(os.path.abspath('.'))
 from utils_peptide.pdb_fixer import fixed_pdb_file
 
@@ -14,17 +15,18 @@ def prepare_structure(protein, peptide, rec, lig):
         rec (bool): Whether to prepare the protein structure for docking.
         lig (bool): Whether to prepare the peptide structure for docking.
     """
-    pdb_file_path, pdb_file = os.path.split(protein)
+    protein = Path(protein)
+    pdb_file_path = protein.parent
     fixed_pdb = fixed_pdb_file( protein, pdb_file_path)
     os.chdir(pdb_file_path)
     if rec :
         #os.system("reduce " + protein + " > " + protein.split(".")[0] + "-H.pdb")
-        os.system("prepare_receptor -r " + fixed_pdb.split(".")[0] + ".pdb"+ " -o " + fixed_pdb.split(".")[0] + ".pdbqt")
+        os.system("prepare_receptor -r " + fixed_pdb.stem + ".pdb"+ " -o " + fixed_pdb.stem + ".pdbqt")
     elif lig :
         #os.system("reduce " + peptide + " > " + peptide.split(".")[0] + "-H.pdb")
-        os.system("prepare_ligand -l " + fixed_pdb.split(".")[0] + "-H.pdb" + " -o " + fixed_pdb.split(".")[0] + ".pdbqt")
+        os.system("prepare_ligand -l " + fixed_pdb.stem + "-H.pdb" + " -o " + fixed_pdb.stem + ".pdbqt")
 
-    os.system("agfr -r " + fixed_pdb.split(".")[0] + ".pdbqt -b receptor -s 1 -p all -asv 1.1 -ps -o "+ fixed_pdb.split("/")[-1].split(".")[0])       
+    os.system("agfr -r " + fixed_pdb.stem + ".pdbqt -b receptor -s 1 -p all -asv 1.1 -ps -o "+ fixed_pdb.stem)       
      
 
 
