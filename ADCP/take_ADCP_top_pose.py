@@ -1,6 +1,5 @@
 import os
 import shutil
-from pprint import pprint
 
 
 def confirm_best_pose_pdb():
@@ -11,12 +10,12 @@ def confirm_best_pose_pdb():
             if 'log.txt' not in os.listdir(sub_path):
                 continue
             log_file = open(sub_path + '/log.txt', 'r')
-            if sum(1 for line in log_file) < 20:
+            if sum(1 for line in log_file) < 25:
                 print(f'your docking job {dir} was failed,please cheak or rerun')
                 continue
             log_file.seek(0)
             lines = log_file.readlines()
-            for i in range(14, 20):
+            for i in range(14, 25):
                 if lines[i].split()[0] == '1':
                     score = lines[i].split()[1]
             
@@ -137,9 +136,9 @@ def merge_best_pdb():
             f_out.write('ENDMDL\n\n')    
 
 if __name__ == '__main__':
-    path =  '/mnt/nas1/lanwei-125/PRLR/ADCP/surface'
+    path =  '/mnt/nas1/lanwei-125/FGF5/FGF5_disulfied_sequence_dock/'
     new_chain_id = 'E'
-    out_dir = '/mnt/nas1/lanwei-125/PRLR/ADCP/ADCP_best_pose_pdb'
+    out_dir = '/mnt/nas1/lanwei-125/FGF5/disf_ADCP_best_pose_pdb/'
     output_file = f'{out_dir}/MC1R-dock-pose.pdb'
     #md_file = '/mnt/nas1/lanwei-125/IL8/v2/'
     min_scores = confirm_best_pose_pdb()

@@ -288,7 +288,7 @@ def draw_2d_tsne(contact_matrixs, labels, HDB_cluster_dict, point_plot):
     logger.info(f"{now_times} 2D t-SNE plot saved to {point_plot}")
 
 # 从聚类中提取随机蛋白，不包含噪音类(label_tag : -1)
-def extract_random_peptides(HDB_cluster_dict, random_peptides):
+def extract_random_peptides(HDB_cluster_dict, peptide_number):
     """
     Extracts a specified number of random peptides from a collection of cluster keys.
     
@@ -306,58 +306,69 @@ def extract_random_peptides(HDB_cluster_dict, random_peptides):
 
     total_peptides = sum(len(peptides) for peptides in real_cluster.values())
     weights = {label: len(peptides) / total_peptides for label, peptides in real_cluster.items()}
-    peptides_to_extract = {label: math.ceil(random_peptides * weight) for label, weight in weights.items()}
+    peptides_to_extract = {label: math.ceil(peptide_number * weight) for label, weight in weights.items()}
 
     selected_peptides = {}
     for label, peptides in real_cluster.items():
         selected_peptides[label] = random.sample(peptides, peptides_to_extract[label])
         
-    real_random_peptides = sum(len(peptides) for peptides in selected_peptides.values())
-    logger.info(f"{now_times} {real_random_peptides} peptides are randomly selected")
+    peptide_number = sum(len(peptides) for peptides in selected_peptides.values())
+    logger.info(f"{now_times} {peptide_number} peptides are randomly selected")
 
     return selected_peptides
 
-# 将聚类中的最优多肽提取出来
-def score_cluster(HDB_cluster_dict, peptide_pdb_dir, HPEP, ADCP):
+
+def get_score(peptide, peptide_pdb_dir, HPEP, ADCP):
+    pdb_file = Path(peptide_pdb_dir) / f"{peptide}.pdb"
+    with open(pdb_file) as f:
+        for line in f:
+            if HPEP:
+                score_marker = "REMARK ITScore"
+            elif ADCP:
+                score_marker = "REMARK SCORE"
+            else:
+                break
+            if line.startswith(score_marker):
+                return float(line.split()[-1])
+
+# 按照多肽的打分提取需要的数量的多肽
+def score_cluster(HDB_cluster_dict, peptide_pdb_dir, HPEP, ADCP, peptide_number):
     """
-    Calculate the minimum scores for each cluster label.
-    
-    Args:
-        HDB_cluster_dict (dict): A dictionary mapping cluster labels to lists of peptides.
-        peptide_pdb_dir (str): The directory where the peptide PDB files are stored.
-        HPEP (bool): A flag indicating whether HPEP is True or False.
-        ADCP (bool): A flag indicating whether ADCP is True or False.
-        
+    Given a dictionary of clusters (HDB_cluster_dict), a directory containing peptide PDB files (peptide_pdb_dir),
+    HPEP, ADCP, and the number of peptides to select (peptide_number), this function scores and selects peptides from each 
+    cluster based on their score and returns a dictionary of selected peptides.
+
+    Parameters:
+    - HDB_cluster_dict (dict): A dictionary containing clusters of peptides.
+    - peptide_pdb_dir (str): The directory path where the peptide PDB files are located.
+    - HPEP (str): The HPEP parameter.
+    - ADCP (str): The ADCP parameter.
+    - peptide_number (int): The number of peptides to select.
+
     Returns:
-        dict: A dictionary mapping cluster labels to tuples containing the peptide with the minimum score and the minimum score itself.
+    - selected_peptides (dict): A dictionary containing the selected peptides from each cluster.
     """
+    selected_peptides = {}
+    total_peptides = sum(len(peptides) for peptides in HDB_cluster_dict.values())
+    weights = {label: len(peptides) / total_peptides for label, peptides in HDB_cluster_dict.items()}
+    peptides_to_extract = {label: math.ceil(peptide_number * weight) for label, weight in weights.items()}
 
-    min_scores = {}
     for label, peptides in HDB_cluster_dict.items():
-        min_score = float("inf")
-        min_peptide = None
-        for peptide in peptides:
-            pdb_file = Path(peptide_pdb_dir) / f"{peptide}.pdb"
-            with open(pdb_file) as f:
-                for line in f:
-                    if HPEP:
-                        score_marker = "REMARK ITScore"
-                    elif ADCP:
-                        score_marker = "REMARK SCORE"
-                    else:   
-                        break
-                    if line.startswith(score_marker):
-                        score = float(line.split()[-1])
-                        if score < min_score:
-                            min_score = score
-                            min_peptide = peptide
-        min_scores[label] = (min_peptide, min_score)
+        min_score_peptides = []
+        peptides.sort(key=lambda peptide: get_score(peptide, peptide_pdb_dir, HPEP, ADCP))
+        min_score_peptides = peptides[:peptides_to_extract[label]]
 
-    logger.info(f"{now_times} Minimum scores calculated for each cluster label")
+        selected_peptides[label] = min_score_peptides
 
-    return min_scores
+    count = 0
+    for label, peptides in selected_peptides.items():
+        count += len(peptides)
 
-def get_peptide_pdb_dir(peptide_dict, cluster_path):
+    logger.info(f"{now_times} {count} peptides are selected from all cluster")
+    
+    return selected_peptides
+
+def get_peptide_pdb_dir(selected_peptides, cluster_path):
     """
     Generates the directory structure and copies PDB files for each peptide in the peptide dictionary to the specified cluster path.
 
@@ -371,32 +382,25 @@ def get_peptide_pdb_dir(peptide_dict, cluster_path):
     Raises:
         None
     """
+    cluster_label_pdbs = []
+    cluster_laber_tags = []
+    for cluster_labels_keys in selected_peptides.keys():
+        cluster_laber_tags.append(int(cluster_labels_keys))
+        cluster_label_pdbs.append(selected_peptides[cluster_labels_keys])
 
-    cluster_dir_list = []
-    for labels, value  in peptide_dict.items():
-        if isinstance(value, tuple):
-            peptides,_ = value
-        else:
-            peptides = value
+    for cluster_label_pdb, cluster_laber_tag in zip(cluster_label_pdbs, cluster_laber_tags):
+        cluster_dir = Path(cluster_path) / f"cluster_{cluster_laber_tag}"
 
-        labels = str(labels)
-        for label in labels:
-            for peptide in peptides:
+        if not cluster_dir.exists():
+            cluster_dir.mkdir(parents=True, exist_ok=True)
             
-                cluster_dir = Path(cluster_path) / f"cluster_{label}"
-                cluster_dir_list.append(cluster_dir)
+        for peptide in cluster_label_pdb:
+            original_pdb = Path(peptide_pdb_dir) / f"{peptide}.pdb"
+            clustered_pdb = cluster_dir / f"{peptide}.pdb"
 
-                if not cluster_dir.exists():
-                    cluster_dir.mkdir(parents=True, exist_ok=True)
-
-                original_pdb = Path(peptide_pdb_dir) / f"{peptide}.pdb"
-                clustered_pdb = cluster_dir / f"{peptide}.pdb"
-
-                if not clustered_pdb.exists():
-                    copyfile(original_pdb, clustered_pdb)
-
-
-    logger.info(f"{now_times} Clustered PDB files saved to {cluster_dir_list}")
+            if not clustered_pdb.exists():
+                copyfile(original_pdb, clustered_pdb)
+        logger.info(f"Clustered PDB files for cluster {cluster_laber_tag} number :{len(cluster_label_pdb)} pdb_name:{cluster_label_pdb} have been saved to {cluster_dir}")
 
 def merge_pdb(HDB_cluster_dict, cluster_path):
     """
@@ -479,9 +483,9 @@ def main(protein_pdb, peptide_pdb_dir, cluster_path , random_peptides):
 
     # 现在提取出的多肽不包括噪音类，也就是会少一个类
     if HPEP or ADCP:
-        select_peptides = score_cluster(HDB_cluster_dict, peptide_pdb_dir, HPEP, ADCP)
+        select_peptides = score_cluster(HDB_cluster_dict, peptide_pdb_dir, HPEP, ADCP, peptide_number)
     else:
-        select_peptides = extract_random_peptides(HDB_cluster_dict, random_peptides)
+        select_peptides = extract_random_peptides(HDB_cluster_dict, peptide_number)
     get_peptide_pdb_dir(select_peptides, cluster_path)
     
     point_plot = cluster_path / "cluster_point_plot.png"
@@ -498,8 +502,8 @@ if __name__ == "__main__":
     HPEP = False  # if your structures are from HPEP, set it to True, else set it to False
     ADCP = False  # if your structures are from ADCP, set it to True, else set it to False
 
-    random_peptides = 50 #if HPEP and ADCP is False, set it to the number of random peptides you want
+    peptide_number = 50 #set the number of peptides you want，if HPEP and ADCP is False, it will be ramdomly selected 
     contact_cutoff = 7  # 6 angstroms
 
-    main(protein_pdb, peptide_pdb_dir, cluster_path , random_peptides)
+    main(protein_pdb, peptide_pdb_dir, cluster_path , peptide_number)
     print("done")
