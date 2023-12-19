@@ -3,7 +3,7 @@ from DrissionPage import ChromiumPage
 from DrissionPage import ChromiumOptions
 from DrissionPage.common import By
 import os
-
+from tqdm import tqdm
 # Create a custom download directory
 
 
@@ -20,8 +20,9 @@ def download_HPEP_result(download_directory, url_log):
     with open(url_log) as f:
         url_list = f.readlines()
     url_list = [url.split()[0] for url in url_list if "%" not in url]
-
-    for url in url_list:
+    
+    # 使用tqdm 显示进度
+    for url in tqdm(url_list):
         page.get(url)
         time.sleep(1)
 
@@ -37,6 +38,13 @@ def download_HPEP_result(download_directory, url_log):
     page.quit()
 
 if __name__ == "__main__":
-    download_directory = "/mnt/nas1/lanwei-125/CD44/docking/HPEP/"
-    url_log = "/mnt/nas1/lanwei-125/CD44/docking/HPEP/OPN-log.txt"
+    # 用argparse解析命令行
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-o","--download_directory", type=str, help="download directory")
+    parser.add_argument("-i","--url_log", type=str, help="url_log path")
+    args = parser.parse_args()
+    download_directory = args.download_directory
+    url_log = args.url_log
+
     download_HPEP_result(download_directory, url_log) 
