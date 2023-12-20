@@ -182,8 +182,11 @@ def cluster_contact_matrix(contact_matrixs,DBCV_score_vs_trials):
 
     min_cluster_sizes = list(range(2, 5))
     min_samples_values = list(range(2, 5))
-    eps_values = [x * 0.1 for x in range(1, 10, 2)]
-    cluster_selection_methods = ["eom", "leaf"]
+    eps_values = [x * 0.1 for x in range(1, 30, 2)]
+    cluster_selection_methods = [
+        "eom", 
+        #"leaf"
+        ]
 
     param_combinations = [
         (min_cluster_size, min_samples, eps, cluster_selection_method)
@@ -329,7 +332,12 @@ def get_score(peptide, peptide_pdb_dir, HPEP, ADCP):
             else:
                 break
             if line.startswith(score_marker):
-                return float(line.split()[-1])
+                score_str = line.split()[-1]
+                try:
+                    return float(score_str)
+                except ValueError:
+                    return float('inf')
+    return float('inf')
 
 # 按照多肽的打分提取需要的数量的多肽
 def score_cluster(HDB_cluster_dict, peptide_pdb_dir, HPEP, ADCP, peptide_number):
@@ -500,9 +508,9 @@ if __name__ == "__main__":
     cluster_path = "/mnt/nas1/lanwei-125/FGF5/disulfide_peptide_cluster/"
 
     HPEP = False  # if your structures are from HPEP, set it to True, else set it to False
-    ADCP = False  # if your structures are from ADCP, set it to True, else set it to False
+    ADCP = True   # if your structures are from ADCP, set it to True, else set it to False
 
-    peptide_number = 50 #set the number of peptides you want，if HPEP and ADCP is False, it will be ramdomly selected 
+    peptide_number = 70 #set the number of peptides you want，if HPEP and ADCP is False, it will be ramdomly selected 
     contact_cutoff = 7  # 6 angstroms
 
     main(protein_pdb, peptide_pdb_dir, cluster_path , peptide_number)
