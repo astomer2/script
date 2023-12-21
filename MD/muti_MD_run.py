@@ -40,7 +40,8 @@ def determine_available_gpu():
 
 def run_command(script_path, work_path, gpu_id):
 
-    command = [script_path, "-i", work_path, "-g", str(gpu_id), "-cyc", "1"]
+    command = (f"nohup python3  {script_path} -i {work_path} -g {gpu_id} -CMAP 1 > {work_path}.log 2>&1 &")
+    os.system(command)
     logging.info(f"运行命令：{command}")
 
 def output_log(tasks):
@@ -59,23 +60,26 @@ def main(subject, script_path):
     logging.info(gpu_ids)
     ran_task = []
     tasks_list = get_tasks(subject)
-
+    
     while len(ran_task) < len(tasks_list):
         # 使用 tqdm 创建进度条，总任务数为 len(tasks)
-        tasks_queue = collections.deque(tasks_list)
-        for _ in tqdm(range(len(tasks_list))):
-            if not gpu_ids:
-                logging.info("没有可用的 GPU，等待 5 秒后重试...")
-                time.sleep(5)
-                gpu_ids = collections.deque(determine_available_gpu())
+        tasks = [task for task in tasks_list if task not in ran_task]
+        tasks_queue = collections.deque(tasks)
+        if not gpu_ids:
+            logging.info("没有可用的 GPU，等待 20 秒后重试...")
+            gpu_ids = collections.deque(determine_available_gpu())
 
-            if gpu_ids:
-                gpu_id = gpu_ids.popleft()
-                work_path = tasks_queue.popleft()
-                run_command(script_path, work_path, gpu_id)
-                ran_task.append(work_path)
+        if gpu_ids:
+            gpu_id = gpu_ids.popleft()
+            work_path = tasks_queue.popleft()
+            run_command(script_path, work_path, gpu_id)
+            ran_task.append(work_path)
+            
+        # 使用 tqdm 创建进度条，总任务数为 len(tasks)，len(ran_task) 为已经运行的任务数，使用这两个值作为tqdm进度
+        progress = len(ran_task) / len(tasks_list)
+        tqdm.write(f"进度：{progress:.2%}")
 
 if __name__ == "__main__":
-    SUBJECT_DIR = "subject"
-    SCRIPT_PATH = "/mnt/sdc/lanwei/script-1/MD/muti_MD_run.py"
-    main(subject, script_path)
+    subject_dir = "/mnt/nas1/lanwei-125/FGF5/disulfide_peptide_cluster/MD/"
+    script_path = "/home/weilan/script/MD/run-simulation.py"
+    main(subject_dir, script_path)
