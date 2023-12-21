@@ -72,9 +72,14 @@ def preprocess_pdb(dir_path: str, protein_pdb: str, cluster_dir_names: list):
         FileNotFoundError: If the protein PDB file or any of the cluster directories or files are not found.
     """
     protein_lines = []
-
+    protein_chain = set()
     with open(protein_pdb) as f:
         protein_lines = [line for line in f if line.startswith("ATOM") or line.startswith("TER")]
+        for line in protein_lines:
+            if line.startswith('ATOM') :
+                chains = line[21]
+                protein_chain.add(chains)
+    protein_chain_str = ','.join(protein_chain)
 
     for cluster_dir_name in cluster_dir_names:
         pdb_path = Path(dir_path) / cluster_dir_name
@@ -89,6 +94,11 @@ def preprocess_pdb(dir_path: str, protein_pdb: str, cluster_dir_names: list):
                 peptide_lines = []
                 with open(pdb_file) as f:
                     peptide_lines = [line for line in f if line.startswith("ATOM")]
+                    for line in peptide_lines:
+                        if line.startswith('ATOM') :
+                            chains = line[21]
+                            peptide_chain.add(chains)
+                peptide_chain_str = ','.join(peptide_chain)
 
                 # Write to new pdb file
                 os.makedirs(pdb_path / pdb_file.stem, exist_ok=True)
@@ -105,6 +115,8 @@ def preprocess_pdb(dir_path: str, protein_pdb: str, cluster_dir_names: list):
                     f.write("END\n")
 
                 logger.info(f'{now_times}: processing {pdb_file} to {new_pdb_path}')
+
+    return protein_chain_str,peptide_chain_str
 
 # 使用rosetta_flex_pepdock进行结构细化处理
 # 首先预处理pdb文件，然后进行局部细化，输出打分文件refinement.score.sc
@@ -264,9 +276,9 @@ def process_refine_pdb(result_path):
                 f.write(''.join(candidate_pdb))
 
 
-def run_refinement(dir_path, result_path, protein_pdb, protein_chain, peptide_chain, np_nums):
+def run_refinement(dir_path, result_path, protein_pdb, np_nums):
     cluster_dir_names = read_pdb(dir_path)
-    preprocess_pdb(dir_path, protein_pdb, cluster_dir_names)
+    protein_chain, peptide_chain = preprocess_pdb(dir_path, protein_pdb, cluster_dir_names)
     make_flag(dir_path, cluster_dir_names, protein_chain, peptide_chain, np_nums)
     take_candidate(cluster_dir_names, result_path)
     process_refine_pdb(result_path)
@@ -276,16 +288,12 @@ if __name__ == '__main__':
     parser.add_argument("-i", "--dir_path", type=str, help='you cluster result dir_path')
     parser.add_argument("-o", "--result_path", type=str, help='output refinement result_path')
     parser.add_argument("-rec", "--protein_pdb", type=str, help='recepor protein_pdb')
-    parser.add_argument("-rec_id", "--protein_chain", type=str, help='you recepor protein_chain')
-    parser.add_argument("-lig_id", "--peptide_chain", type=str, help='you ligand peptide_chain')
     parser.add_argument("-n", "--np_nums", type=int, help='np_nums')
 
     args = parser.parse_args()
     dir_path = args.dir_path
     result_path = args.result_path
     protein_pdb = args.protein_pdb
-    protein_chain = args.protein_chain
-    peptide_chain = args.peptide_chain
     np_nums = args.np_nums
 
-    run_refinement(dir_path, result_path, protein_pdb, protein_chain, peptide_chain, np_nums)
+    run_refinement(dir_path, result_path, protein_pdb, np_nums)
