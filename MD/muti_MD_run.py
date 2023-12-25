@@ -1,5 +1,6 @@
 import os
 import time
+from click import File
 from tqdm import tqdm
 import subprocess
 import collections
@@ -32,10 +33,15 @@ def instantly_available_gpu():
 
 def determine_available_gpu():
 
-    pre_gpu_ids = instantly_available_gpu()
-    time.sleep(20)
-    upgrade_gpu_ids = instantly_available_gpu()
-    gpu_ids = list(set(pre_gpu_ids) & set(upgrade_gpu_ids))
+    gpu_ids_0 = instantly_available_gpu()
+    time.sleep(15)
+    gpu_ids_1 = instantly_available_gpu()
+    time.sleep(15)
+    gpu_ids_2 = instantly_available_gpu()
+    time.sleep(15)
+    gpu_ids_3 = instantly_available_gpu()
+
+    gpu_ids = list(set(gpu_ids_0) & set(gpu_ids_1) & set(gpu_ids_2) & set(gpu_ids_3))
     return gpu_ids
 
 def run_command(script_path, work_path, gpu_id):
@@ -66,14 +72,19 @@ def main(subject, script_path):
         tasks = [task for task in tasks_list if task not in ran_task]
         tasks_queue = collections.deque(tasks)
         if not gpu_ids:
-            logging.info("没有可用的 GPU，等待 20 秒后重试...")
+            logging.info("没有可用的 GPU，等待 45 秒后重试...")
             gpu_ids = collections.deque(determine_available_gpu())
 
         if gpu_ids:
             gpu_id = gpu_ids.popleft()
             work_path = tasks_queue.popleft()
-            run_command(script_path, work_path, gpu_id)
-            ran_task.append(work_path)
+            if os.path.exists(f"{work_path}/mdinfo"):
+                ran_task.append(work_path)
+                logging.info(f"{work_path} 已经运行，跳过")
+                continue
+            else:            
+                run_command(script_path, work_path, gpu_id)
+                ran_task.append(work_path)
             
         # 使用 tqdm 创建进度条，总任务数为 len(tasks)，len(ran_task) 为已经运行的任务数，使用这两个值作为tqdm进度
         progress = len(ran_task) / len(tasks_list)
@@ -81,5 +92,5 @@ def main(subject, script_path):
 
 if __name__ == "__main__":
     subject_dir = "/mnt/nas1/lanwei-125/FGF5/disulfide_peptide_cluster/MD/"
-    script_path = "/home/weilan/script/MD/run-simulation.py"
+    script_path = "/home/weilan/script/MD/run_simulation.py"
     main(subject_dir, script_path)

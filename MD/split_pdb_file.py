@@ -56,7 +56,7 @@ def split_pdb_run(workpath):
 
 
 if __name__ == '__main__':
-    workpath = '/mnt/nas1/lanwei-125/FGF5/disulfide_peptide_cluster/MD/'
+    workpath = '/mnt/nas1/lanwei-125/FGF5/Dynamic_disulfide_bond_simulation/'
     split_pdb_run(workpath)
 
 

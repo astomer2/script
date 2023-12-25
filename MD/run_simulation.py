@@ -153,7 +153,7 @@ def change_cys_to_cyx(peptide_structure):
 
     
 
-def sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, solvateions ,pepcyc, pepcys):
+def sovlate_pdb(peptide_structure:str, protein_structure:str, induced_hydrogen:bool, solvateions:bool ,pepcyc:bool, pepcys:bool):
     """
     Generate the solvated structure of a peptide-protein complex using tleap.
 
@@ -166,7 +166,7 @@ def sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, solvatei
     - pepcys (bool): Flag indicating whether to perform pepcys modifications on the peptide.
 
     Returns:
-    None
+    use amber tleap to add sovl and water in peptide-prorein complex, return complex_solvated.prmtop and complex_solvated.inpcrd 
     """
     Volume = 0
     charge = 0
@@ -265,7 +265,7 @@ def sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, solvatei
 
     return
 
-def take_paramter_flie(parmter_file):
+def take_paramter_flie(parmter_file:str):
     """
     Copies all files with the extension '.in' from the specified parameter file directory to the working directory.
 

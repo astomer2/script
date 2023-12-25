@@ -8,7 +8,8 @@ class DockingResult:
     name: str
     score: float
 
-def read_score(log_path: Path, docking_results: list):
+def read_score(log_path: Path):
+    docking_results = []
     score_file_path = log_path / 'score.txt'
 
     with score_file_path.open('w') as score_file:
@@ -59,7 +60,6 @@ def write_result(result_path: Path, docking_results: list):
             result_file.write(f"{name.upper()}\t{min_score}\t{max_score}\t{avg_score:.2f}\t{med_score:.2f}\t{var_score:.2f}\n")
 
 if __name__ == '__main__':
-    path = Path('/mnt/nas1/lanwei-125/FGF5/FGF5_disulfied_sequence_dock/')
-    docking_results = []
-    docking_results = read_score(path, docking_results)
+    path = Path('/mnt/nas1/lanwei-125/FGF5/')    
+    docking_results = read_score(path)
     write_result(path, docking_results)
