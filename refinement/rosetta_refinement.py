@@ -81,6 +81,8 @@ def preprocess_pdb(dir_path: str, protein_pdb: str, cluster_dir_names: list):
                 protein_chain.add(chains)
     protein_chain_str = ','.join(protein_chain)
 
+    peptide_chain = set()
+    peptide_chain_str = ''
     for cluster_dir_name in cluster_dir_names:
         pdb_path = Path(dir_path) / cluster_dir_name
 
@@ -285,10 +287,10 @@ def run_refinement(dir_path, result_path, protein_pdb, np_nums):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='after clustering, run refinement, use rosetta to refine the pdb, choose the best one as the final pdb')
-    parser.add_argument("-i", "--dir_path", type=str, help='you cluster result dir_path')
-    parser.add_argument("-o", "--result_path", type=str, help='output refinement result_path')
+    parser.add_argument("-i", "--dir_path", type=str, help='you cluster result in dir_path')
+    parser.add_argument("-o", "--result_path", type=str, help='output refinement to result_path')
     parser.add_argument("-rec", "--protein_pdb", type=str, help='recepor protein_pdb')
-    parser.add_argument("-n", "--np_nums", type=int, help='np_nums')
+    parser.add_argument("-n", "--np_nums", type=int, help='np_nums, max number of half cores processing')
 
     args = parser.parse_args()
     dir_path = args.dir_path
