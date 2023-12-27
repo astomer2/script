@@ -56,10 +56,11 @@ def write_result(result_path: Path, docking_results: list):
             med_score = np.median(scores)
             avg_score = np.mean(scores)
             var_score = np.var(scores)
+            machine_score = avg_score + 2.5*(float(var_score)/float(len(scores)))**0.5
 
-            result_file.write(f"{name.upper()}\t{min_score}\t{max_score}\t{avg_score:.2f}\t{med_score:.2f}\t{var_score:.2f}\n")
+            result_file.write(f"{name.upper()}\t{min_score}\t{max_score}\t{avg_score:.2f}\t{med_score:.2f}\t{var_score:.2f}\t{machine_score:.2f}\n")
 
 if __name__ == '__main__':
-    path = Path('/mnt/nas1/lanwei-125/FGF5/')    
+    path = Path('/mnt/nas1/lanwei-125/PRLR/GA-generator/')    
     docking_results = read_score(path)
     write_result(path, docking_results)
