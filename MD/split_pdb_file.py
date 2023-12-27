@@ -1,6 +1,9 @@
 import os 
 from genericpath import exists
 import shutil
+import sys
+sys.path.append(os.path.abspath('.'))
+from utils_peptide.pdb_fixer import fixed_pdb_file
 
 def make_dirs(file_path):
     for files in os.listdir(file_path):
@@ -53,10 +56,11 @@ def split_pdb_run(workpath):
             protein = os.path.join(subdir_path, 'protein.pdb')
             peptide = os.path.join(subdir_path, 'peptide.pdb')
             write_pdb_chain(chains, peptide, protein)
-
+            fixed_pdb_file(peptide)
+            fixed_pdb_file(protein)
 
 if __name__ == '__main__':
-    workpath = '/mnt/nas1/lanwei-125/FGF5/Dynamic_disulfide_bond_simulation/'
+    workpath = '/mnt/nas1/lanwei-125/FGF5/Dynamic_disulfide_bond_simulation/sirah_MD/'
     split_pdb_run(workpath)
 
 

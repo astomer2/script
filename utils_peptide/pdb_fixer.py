@@ -3,7 +3,7 @@ from pdbfixer import PDBFixer
 from pathlib import Path
 from simtk.openmm.app import PDBFile
 
-def fixed_pdb_file(pdb_file, workdir) :
+def fixed_pdb_file(pdb_file) :
     """
     Generate a fixed PDB file.
 
@@ -14,10 +14,10 @@ def fixed_pdb_file(pdb_file, workdir) :
     Returns:
         a fixed PDB file with the same name as the input PDB file.
     """
-    complex_fixed_pdb = Path(workdir) / Path(pdb_file).name
+    pdb_file = Path(pdb_file)
 
 
-    fixer = PDBFixer(filename= str(complex_fixed_pdb))
+    fixer = PDBFixer(filename= str(pdb_file))
 
     fixer.findMissingResidues()
     fixer.findNonstandardResidues()
@@ -27,8 +27,7 @@ def fixed_pdb_file(pdb_file, workdir) :
 
     fixer.findMissingAtoms()
     fixer.addMissingAtoms()
-    fixer.addMissingHydrogens(7.0)
-    
-    PDBFile.writeFile(fixer.topology, fixer.positions, open(complex_fixed_pdb, 'w'))
+    fixer.addMissingHydrogens(7.0)    
+    PDBFile.writeFile(fixer.topology, fixer.positions, open(pdb_file, 'w'))
 
-    return complex_fixed_pdb
+    return pdb_file
