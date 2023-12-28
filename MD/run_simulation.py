@@ -147,10 +147,9 @@ def change_cys_to_cyx(peptide_structure):
     return 
 
     
-
 def sovlate_pdb(
         peptide_structure:str, protein_structure:str, 
-        induced_hydrogen:bool, all_atom:bool ,pepcyc:bool, pepcys:bool, dyn_disf:bool
+        induced_hydrogen:bool, all_atom:bool ,pepcyc:bool, pepcys:bool, GC:bool
         ):
     """
     Generate the solvated structure of a peptide-protein complex using tleap.
@@ -162,6 +161,7 @@ def sovlate_pdb(
     - solvateions (bool): Flag indicating whether to solvate the complex with water molecules and ions.
     - pepcyc (bool): Flag indicating whether to perform pepcyc modifications on the peptide.
     - pepcys (bool): Flag indicating whether to perform pepcys modifications on the peptide.
+    - GC (bool): Flag indicating whether to perform GC modifications on the protein.
 
     Returns:
     use amber tleap to add sovl and water in peptide-prorein complex, return complex_solvated.prmtop and complex_solvated.inpcrd 
@@ -186,23 +186,59 @@ def sovlate_pdb(
         os.rename( protein_structure.split(".")[0] + "_noh.pdb", protein_structure )
         os.rename(peptide_structure.split(".")[0]+ "_noh.pdb", peptide_structure )
 
-    if dyn_disf:
+    if GC:
+        cgconv = "/home/weilan/software/amber20/dat/SIRAH/tools/CGCONV/cgconv.pl"
         os.system("pdb2pqr " + protein_structure + " " +rec_name+".pqr -ff{AMBER}")
         os.system("pdb2pqr " + peptide_structure + " " +pep_name+".pqr -ff{AMBER}")
-        os.system("/mnt/nas1/software/MD/cgconv.pl -i " + rec_name + ".pqr -o " + rec_name + "_sirah.pdb")
-        os.system("/mnt/nas1/software/MD/cgconv.pl -i " + pep_name + ".pqr -o " + pep_name + "_sirah.pdb")
-        f=open(work_path+"/"+"sirah_input.in","w")
+        os.system(cgconv+" -i " + rec_name + ".pqr -o " + rec_name + "_sirah.pdb")
+        os.system(cgconv+" -i " + pep_name + ".pqr -o " + pep_name + "_sirah.pdb")
+        f=open(work_path+"/"+"unsolvateions_tleap.in","w")
         peptide_cyx_id = identify_cys_id(peptide_structure)
+        f.write("addPath /home/weilan/software/amber20/dat/SIRAH \n")
         f.write("source leaprc.sirah \n")
-        f.write("protein= loadpdb " + protein_structure + "\n")
-        f.write("peptide= loadpdb " + peptide_structure + "\n")
-        f.write("bond peptide."+peptide_cyx_id[0]+".BSG peptide"+peptide_cyx_id[1]+".BSG \n")        
+        f.write("protein= loadpdb " + rec_name + "_sirah.pdb\n")
+        f.write("peptide= loadpdb " + pep_name + "_sirah.pdb \n")
+        f.write("bond peptide."+str(peptide_cyx_id[0])+".BSG peptide."+str(peptide_cyx_id[1])+".BSG \n")        
         f.write("complex = combine {protein peptide} \n")
         f.write("charge complex \n")
-        f.write("solvatOct complex WT4BOX 15.0 \n")
+        f.write("solvateoct complex WT4BOX 15.0 \n")
         f.write("quit \n")
         f.close()
+
+        os.system("tleap -f "+ work_path+ "/" +"unsolvateions_tleap.in ")
+        f=open(work_path+"/"+"leap.log","r")
+        ln=f.readlines()
+        f.close()
+
+        for x in range(0,len(ln)):
+            if ln[x].find("Volume:") !=-1:
+                Volume=float(ln[x].split()[1])   
+        for x in range(0,len(ln)):
+            if ln[x].find("Total perturbed charge:") !=-1:
+                charge=float(ln[x].split()[3])   
+                print(charge)
         
+        f=open(work_path + "/" + "solvateions"+"_tleap.in","w")
+        f.write("addPath /home/weilan/software/amber20/dat/SIRAH \n")
+        f.write("source leaprc.sirah \n")
+        f.write("protein= loadpdb " + rec_name + "_sirah.pdb\n")
+        f.write("peptide= loadpdb " + pep_name + "_sirah.pdb \n")
+        f.write("bond peptide."+str(peptide_cyx_id[0])+".BSG peptide."+str(peptide_cyx_id[1])+".BSG \n")        
+        f.write("saveamberparm protein protein.prmtop protein.inpcrd \n")  
+        f.write("saveamberparm peptide peptide.prmtop peptide.inpcrd \n") 
+        f.write("complex = combine {protein peptide} \n")
+        f.write("solvateoct complex WT4BOX 15.0 \n")
+        if charge<=0:
+            f.write("addIons complex NaW "+str(abs(charge))+"\n") 
+        else:
+            f.write("addIons complex ClW "+str(charge)+"\n")
+        ions=round(abs(int(conc*6.023*0.0001*Volume))) 
+        f.write("addIonsRand complex NaW "+str(ions)+" ClW "+ str(ions) +"\n") 
+        f.write("saveamberparm complex complex_solvated.prmtop complex_solvated.inpcrd \n")  
+        f.write("savepdb complex complex_solvated.pdb  \n")      
+        f.write("quit")
+        f.close()
+        os.system("tleap -f "+work_path + "/"+"solvateions"+"_tleap.in")
 
     if all_atom:
         f=open(work_path+"/"+"unsolvateions"+"_tleap.in","w")
@@ -320,7 +356,7 @@ def add_cmap_to_prmtop(cmap_path):
 
 
 
-def run_simulation(cuda_device_id ,CMAP ,cmap_path):
+def run_simulation(cuda_device_id ,CMAP ,cmap_path, all_atom):
     """
     Runs a simulation using the specified CUDA device ID, CMAP flag, and CMAP path.
 
@@ -341,15 +377,16 @@ def run_simulation(cuda_device_id ,CMAP ,cmap_path):
         complex_prmtop = 'complex_solvated.prmtop'
     #maybe write a loop?
 
-    os.system(f"pmemd.cuda -O -i 01.min.in -o min1.out -p {complex_prmtop} -c complex_solvated.inpcrd -r complex_min_01.rst -ref complex_solvated.inpcrd")
-    os.system(f"pmemd.cuda -O -i 02.min.in -o min2.out -p {complex_prmtop} -c complex_min_01.rst -r complex_min_02.rst -x complex_min_02.mdcrd -ref complex_min_01.rst")
-    os.system(f"pmemd.cuda -O -i 03.min.in -o min3.out -p {complex_prmtop} -c complex_min_02.rst -r complex_min_03.rst -x complex_min_03.mdcrd -ref complex_min_02.rst")
-    os.system(f"pmemd.cuda -O -i 04.min.in -o min4.out -p {complex_prmtop} -c complex_min_03.rst -r complex_min_04.rst -x complex_min_04.mdcrd -ref complex_min_03.rst")
-    os.system(f"pmemd.cuda -O -i 05.min.in -o min5.out -p {complex_prmtop} -c complex_min_04.rst -r complex_min_05.rst -x complex_min_05.mdcrd -ref complex_min_04.rst")
-    os.system(f"pmemd.cuda -O -i 06.min.in -o min6.out -p {complex_prmtop} -c complex_min_05.rst -r complex_min_06.rst -x complex_min_06.mdcrd -ref complex_min_05.rst")
-    os.system(f"pmemd.cuda -O -i 07.min.in -o min7.out -p {complex_prmtop} -c complex_min_06.rst -r complex_min_07.rst -x complex_min_07.mdcrd -ref complex_min_06.rst")
-    os.system(f"pmemd.cuda -O -i 08.min.in -o min8.out -p {complex_prmtop} -c complex_min_07.rst -r complex_min_08.rst -x complex_min_08.mdcrd -ref complex_min_07.rst")
-    os.system(f"pmemd.cuda -O -i 09.md.in -o md1.out -p {complex_prmtop} -c complex_min_08.rst -r complex_md1.rst -x complex_md1.mdcrd -ref complex_min_08.rst")
+    os.system(f"pmemd.cuda -O -i 01.in -o min1.out -p {complex_prmtop} -c complex_solvated.inpcrd -r complex_01.rst -ref complex_solvated.inpcrd")
+    os.system(f"pmemd.cuda -O -i 02.in -o min2.out -p {complex_prmtop} -c complex_01.rst -r complex_02.rst -x complex_02.mdcrd -ref complex_01.rst")
+    os.system(f"pmemd.cuda -O -i 03.in -o min3.out -p {complex_prmtop} -c complex_02.rst -r complex_03.rst -x complex_03.mdcrd -ref complex_02.rst")
+    os.system(f"pmemd.cuda -O -i 04.in -o min4.out -p {complex_prmtop} -c complex_03.rst -r complex_04.rst -x complex_04.mdcrd -ref complex_03.rst")
+    os.system(f"pmemd.cuda -O -i 05.in -o min5.out -p {complex_prmtop} -c complex_04.rst -r complex_05.rst -x complex_05.mdcrd -ref complex_04.rst")
+    if all_atom:
+        os.system(f"pmemd.cuda -O -i 06.in -o min6.out -p {complex_prmtop} -c complex_05.rst -r complex_06.rst -x complex_06.mdcrd -ref complex_05.rst")
+        os.system(f"pmemd.cuda -O -i 07.in -o min7.out -p {complex_prmtop} -c complex_06.rst -r complex_07.rst -x complex_07.mdcrd -ref complex_06.rst")
+        os.system(f"pmemd.cuda -O -i 08.in -o min8.out -p {complex_prmtop} -c complex_07.rst -r complex_08.rst -x complex_08.mdcrd -ref complex_07.rst")
+        os.system(f"pmemd.cuda -O -i 09.in -o md1.out -p {complex_prmtop} -c complex_08.rst -r complex_md.rst -x complex_md.mdcrd -ref complex_08.rst")
 
 
 
@@ -406,15 +443,15 @@ def analysis(work_path, reference,target):
 
 def simulation(
         work_path, parmter_file ,cmap_path , cuda_device_id, 
-        induced_hydrogen, solvateions, CMAP, pepcyc, pepcys
+        induced_hydrogen, all_atom, CMAP, pepcyc, pepcys, GC
         ):
 
     os.chdir(work_path)
     peptide_structure = f'{work_path}/peptide.pdb'
     protein_structure = f'{work_path}/protein.pdb'
-    sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, solvateions, pepcyc ,pepcys)
+    sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, all_atom, pepcyc ,pepcys, GC)
     take_paramter_flie(parmter_file)
-    run_simulation(cuda_device_id, CMAP, cmap_path)
+    run_simulation(cuda_device_id, CMAP, cmap_path, all_atom)
     protein_id ,reference = reference_id(protein_structure)
     target = target_id(protein_id, peptide_structure)
     analysis(work_path, reference, target)
@@ -436,6 +473,7 @@ if __name__ == "__main__":
     parser.add_argument("-CMAP", "--CMAP", nargs='?', type=int, choices=[0, 1], default=0, help="If enable CMAP, induced charmm36 parameters for Amber prmtop file, default is False")
     parser.add_argument("-cyc", "--pepcyc", nargs='?', type=int, choices=[0, 1], default=0, help="If enable pepcyc, Connect any two amino acids at the beginning and end of a polypeptide so that their free amino and carboxyl groups form a peptide bond, must close CMAP, default is False")
     parser.add_argument("-cys", "--pepcys", nargs='?', type=int, choices=[0, 1], default=0, help="If enable pepcys, Connect any two cysteines in a polypeptide whose distance is greater than 2.05 Angstroms to form a disulfide bond between their sulfhydryl groups, support CMAP, default is False")
+    parser.add_argument("-GC", "--Coarse_graining", nargs='?', type=int, choices=[0, 1], default=0, help="If enable coarse graining, use the coarse graining algorithm to generate the coarse-grained protein, default is False, required pdb2pqr and cgconv perl script ")
     # 解析命令行参数
     args = parser.parse_args()
 
@@ -449,6 +487,7 @@ if __name__ == "__main__":
     CMAP = bool(args.CMAP)
     pepcyc = bool(args.pepcyc)
     pepcys = bool(args.pepcys)
+    GC = bool(args.Coarse_graining)
 
     # 增加额外的判断
     if pepcyc and CMAP:
@@ -456,6 +495,13 @@ if __name__ == "__main__":
     if CMAP and not pepcyc:
         # 可以使用默认路径参数，也可以手动传入-c的参数
         cmap_path = args.CMAP_path
+
+    if GC and all_atom:
+        raise ValueError("Error: When GC is True, all_atom must be False.")
+    if GC and not induced_hydrogen:
+        raise ValueError("Error: When GC is True, induced_hydrogen must be True.")
+    if GC and CMAP:
+        raise ValueError("Error: When GC is True, CMAP must be False.")
 
     # 设置默认值
 
@@ -470,4 +516,4 @@ if __name__ == "__main__":
     conc = 0.15
 
     # 调用 simulation 函数
-    simulation(work_path, parmter_file, cmap_path, cuda_device_id, induced_hydrogen, all_atom, CMAP, pepcyc, pepcys)
+    simulation(work_path, parmter_file, cmap_path, cuda_device_id, induced_hydrogen, all_atom, CMAP, pepcyc, pepcys, GC)
