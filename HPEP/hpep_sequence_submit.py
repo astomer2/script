@@ -5,6 +5,8 @@ import argparse
 from DrissionPage import ChromiumOptions
 from DrissionPage import ChromiumPage
 from DrissionPage.common import By
+from logging import Logger
+from pathlib import Path
 
 def read_sequences(file_path):
     with open(file_path, 'r') as f:
@@ -17,11 +19,20 @@ def submit_sequence(page, seq_list):
     fasta_seq = page.ele((By.XPATH, '//*[@id="fastaseq2"]'))
     fasta_seq.input('\n'.join(seq_list))
     time.sleep(1.5)
-
+'''
 def submit_receptor(page, Receptor_file):
     pdb_file = page.ele((By.XPATH,'//*[@id="pdbfile1"]'))
     pdb_file.input(Receptor_file)
+    print("Receptor file uploaded")
     time.sleep(1.5)
+'''
+
+def submit_receptor(page, Receptor_file):
+    page.set.upload_files(Receptor_file)
+    page.ele((By.XPATH,'//*[@id="pdbfile1"]')).click()
+    page.wait.upload_paths_inputted()
+    time.sleep(1.5)
+
 
 def submit_optional(page):
     sub_optional = page.ele((By.XPATH,'//*[@id="option1"]'))
@@ -61,9 +72,8 @@ def run(seq_file, Receptor_file, log_file, reference_file):
             continue
         submit_task(page)
         save_result(page, log_file)
-
     page.quit()
-
+'''
 if __name__ == '__main__':
     
     
@@ -78,4 +88,12 @@ if __name__ == '__main__':
     log_file = args.log
     reference_file = args.reference
     
+    run(seq_file, Receptor_file, log_file, reference_file)
+'''
+
+if __name__ == '__main__':
+    seq_file = "/mnt/nas1/lanwei-125/PRLR/GA-generator/HPEP/test.txt"
+    Receptor_file = "/mnt/nas1/lanwei-125/PRLR/structure_prepare/PRLR.pdb"
+    log_file =  "/mnt/nas1/lanwei-125/PRLR/GA-generator/HPEP/log.txt"
+    reference_file = ""
     run(seq_file, Receptor_file, log_file, reference_file)

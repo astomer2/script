@@ -104,9 +104,7 @@ def identify_cys_id(peptide_structure):
     Returns:
     - residue_ids (list): A list of integer residue IDs corresponding to the CYS or CYX residues found in the file.
     """
-
     cys_residue_ids = []
-    new_line = []
     prev_id = 0
     with open (peptide_structure) as f:
         lines = f.readlines()
@@ -114,16 +112,10 @@ def identify_cys_id(peptide_structure):
         if line.startswith('ATOM'):
             residue = line[17:20]
             if residue == 'CYS' or residue == 'CYX':
-                line = line[:17] + 'CYX' + line[20:]
-                new_line.append(line)
                 residue_id = line[22:26].strip()
                 if residue_id != prev_id:
                     prev_id = residue_id
                     cys_residue_ids.append(int(residue_id))
-            else :
-                new_line.append(line)
-    with open(peptide_structure, 'w') as f:
-        f.writelines(new_line)
     return cys_residue_ids
 
 def change_cys_to_cyx(peptide_structure):
@@ -139,21 +131,27 @@ def change_cys_to_cyx(peptide_structure):
     Raises:
     - FileNotFoundError: If the peptide structure file does not exist.
     """
+    new_line = []
     with open (peptide_structure) as f:
         lines = f.readlines()
-    for i, line in enumerate(lines):
+    for line in lines:
         if line.startswith('ATOM'):
             residue = line[17:20]
-            if residue == 'CYS':
+            if residue == 'CYS' or residue == 'CYX':
                 line = line[:17] + 'CYX' + line[20:]
-            lines[i] = line
-
-    with open (peptide_structure, 'w') as f:
-        f.writelines(lines)
+                new_line.append(line)
+            else :
+                new_line.append(line)
+    with open(peptide_structure, 'w') as f:
+        f.writelines(new_line)
+    return 
 
     
 
-def sovlate_pdb(peptide_structure:str, protein_structure:str, induced_hydrogen:bool, solvateions:bool ,pepcyc:bool, pepcys:bool):
+def sovlate_pdb(
+        peptide_structure:str, protein_structure:str, 
+        induced_hydrogen:bool, all_atom:bool ,pepcyc:bool, pepcys:bool, dyn_disf:bool
+        ):
     """
     Generate the solvated structure of a peptide-protein complex using tleap.
 
@@ -171,9 +169,10 @@ def sovlate_pdb(peptide_structure:str, protein_structure:str, induced_hydrogen:b
     Volume = 0
     charge = 0
     ions =  0
+    rec_name = protein_structure.split(".")[0]
+    pep_name = peptide_structure.split(".")[0]
     if induced_hydrogen :
-        rec_name = protein_structure.split(".")[0]
-        pep_name = peptide_structure.split(".")[0]
+
 
         os.system("pdb4amber -y -i  " + protein_structure + "  -o " + rec_name + "_noh.pdb")
         os.system("pdb4amber -y -i  "+ peptide_structure + "  -o " + pep_name + "_noh.pdb")
@@ -187,8 +186,25 @@ def sovlate_pdb(peptide_structure:str, protein_structure:str, induced_hydrogen:b
         os.rename( protein_structure.split(".")[0] + "_noh.pdb", protein_structure )
         os.rename(peptide_structure.split(".")[0]+ "_noh.pdb", peptide_structure )
 
+    if dyn_disf:
+        os.system("pdb2pqr " + protein_structure + " " +rec_name+".pqr -ff{AMBER}")
+        os.system("pdb2pqr " + peptide_structure + " " +pep_name+".pqr -ff{AMBER}")
+        os.system("/mnt/nas1/software/MD/cgconv.pl -i " + rec_name + ".pqr -o " + rec_name + "_sirah.pdb")
+        os.system("/mnt/nas1/software/MD/cgconv.pl -i " + pep_name + ".pqr -o " + pep_name + "_sirah.pdb")
+        f=open(work_path+"/"+"sirah_input.in","w")
+        peptide_cyx_id = identify_cys_id(peptide_structure)
+        f.write("source leaprc.sirah \n")
+        f.write("protein= loadpdb " + protein_structure + "\n")
+        f.write("peptide= loadpdb " + peptide_structure + "\n")
+        f.write("bond peptide."+peptide_cyx_id[0]+".BSG peptide"+peptide_cyx_id[1]+".BSG \n")        
+        f.write("complex = combine {protein peptide} \n")
+        f.write("charge complex \n")
+        f.write("solvatOct complex WT4BOX 15.0 \n")
+        f.write("quit \n")
+        f.close()
+        
 
-    if solvateions:
+    if all_atom:
         f=open(work_path+"/"+"unsolvateions"+"_tleap.in","w")
         f.write("source leaprc.protein.ff14SB \n")
         f.write("source leaprc.water.tip3p \n")
@@ -203,7 +219,6 @@ def sovlate_pdb(peptide_structure:str, protein_structure:str, induced_hydrogen:b
         f.close()
 
         os.system("tleap -f "+ work_path+ "/" +"unsolvateions_tleap.in ")
-
         f=open(work_path+"/"+"leap.log","r")
         ln=f.readlines()
         f.close()
@@ -215,36 +230,33 @@ def sovlate_pdb(peptide_structure:str, protein_structure:str, induced_hydrogen:b
             if ln[x].find("Total perturbed charge:") !=-1:
                 charge=float(ln[x].split()[3])   
                 print(charge)
-    f=open(work_path + "/" + "solvateions"+"_tleap.in","w")
-    f.write("source leaprc.protein.ff14SB \n")
-    f.write("source leaprc.water.tip3p \n")
-    f.write("loadamberparams frcmod.ions1lm_1264_tip3p \n")
 
-    if pepcyc :
-        sequences, sequence_lengths = extract_three_letter_code(peptide_structure)
-        formatted_sequence = "{" + " ".join(sequences) + "}"
-        f.write("peptide= loadpdbusingseq  " + peptide_structure + " "+formatted_sequence +"\n")
-        f.write("remove peptide peptide."+ str(sequence_lengths) +".OXT \n")
-        f.write("bond peptide.1.N peptide."+ str(sequence_lengths) +".C \n")
+        f=open(work_path + "/" + "solvateions"+"_tleap.in","w")
+        f.write("source leaprc.protein.ff14SB \n")
+        f.write("source leaprc.water.tip3p \n")
+        f.write("loadamberparams frcmod.ions1lm_1264_tip3p \n")
 
-    elif  pepcys : 
-        cys_residue_ids  = identify_cys_id(peptide_structure)
-        f.write("peptide = loadpdb " + peptide_structure + "\n")
-        f.write("bond peptide."+ str(cys_residue_ids[0]) +".SG peptide."+ str(cys_residue_ids[1]) +".SG \n")
-    else:
-        f.write("peptide= loadpdb " + peptide_structure + "\n")
+        if pepcyc :
+            sequences, sequence_lengths = extract_three_letter_code(peptide_structure)
+            formatted_sequence = "{" + " ".join(sequences) + "}"
+            f.write("peptide= loadpdbusingseq  " + peptide_structure + " "+formatted_sequence +"\n")
+            f.write("remove peptide peptide."+ str(sequence_lengths) +".OXT \n")
+            f.write("bond peptide.1.N peptide."+ str(sequence_lengths) +".C \n")
 
-    f.write("protein= loadpdb " + protein_structure + "\n")
-    f.write("saveamberparm protein protein.prmtop protein.inpcrd \n")  
-    f.write("saveamberparm peptide peptide.prmtop peptide.inpcrd \n")  
-    f.write("complex = combine {protein peptide} \n")
-    f.write("saveamberparm complex complex.prmtop complex.inpcrd \n")
-    f.write("set default PBRadii mbondi2 \n")
+        elif  pepcys : 
+            cys_residue_ids  = identify_cys_id(peptide_structure)
+            change_cys_to_cyx(peptide_structure)
+            f.write("peptide = loadpdb " + peptide_structure + "\n")
+            f.write("bond peptide."+ str(cys_residue_ids[0]) +".SG peptide."+ str(cys_residue_ids[1]) +".SG \n")
+        else:
+            f.write("peptide= loadpdb " + peptide_structure + "\n")
 
-     
-
-    if solvateions:
-
+        f.write("protein= loadpdb " + protein_structure + "\n")
+        f.write("saveamberparm protein protein.prmtop protein.inpcrd \n")  
+        f.write("saveamberparm peptide peptide.prmtop peptide.inpcrd \n")  
+        f.write("complex = combine {protein peptide} \n")
+        f.write("saveamberparm complex complex.prmtop complex.inpcrd \n")
+        f.write("set default PBRadii mbondi2 \n")
         f.write("solvateBox complex TIP3PBOX 15 \n") 
         if charge<=0:
             f.write("addIons complex Na+ "+str(abs(charge))+"\n") 
@@ -255,13 +267,13 @@ def sovlate_pdb(peptide_structure:str, protein_structure:str, induced_hydrogen:b
         f.write("addIonsRand complex Na+ "+str(ions)+" Cl- "+ str(ions) +"\n") 
         f.write("saveamberparm complex complex_solvated.prmtop complex_solvated.inpcrd \n")  
         f.write("savepdb complex complex_solvated.pdb  \n")      
-    f.write("quit")
-    f.close()
+        f.write("quit")
+        f.close()
 
-    # call tleap to generate the file
-    os.system("tleap -f "+work_path + "/"+"solvateions"+"_tleap.in")
-    #os.system("rm "+work_path + "/"+"solvateions"+"_tleap.in")
-    #os.system("rm "+work_path + "/"+"unsolvateions"+"_tleap.in")
+        # call tleap to generate the file
+        os.system("tleap -f "+work_path + "/"+"solvateions"+"_tleap.in")
+        #os.system("rm "+work_path + "/"+"solvateions"+"_tleap.in")
+        #os.system("rm "+work_path + "/"+"unsolvateions"+"_tleap.in")
 
     return
 
@@ -392,7 +404,10 @@ def analysis(work_path, reference,target):
     os.system("MMPBSA.py --clean")
 
 
-def simulation(work_path, parmter_file ,cmap_path , cuda_device_id, induced_hydrogen, solvateions, CMAP, pepcyc, pepcys):
+def simulation(
+        work_path, parmter_file ,cmap_path , cuda_device_id, 
+        induced_hydrogen, solvateions, CMAP, pepcyc, pepcys
+        ):
 
     os.chdir(work_path)
     peptide_structure = f'{work_path}/peptide.pdb'
@@ -417,7 +432,7 @@ if __name__ == "__main__":
     parser.add_argument("-p", "--parmter_file", nargs='?', type=str, default=default_parmter_file, help="Path to the amber simulation parmter files, default is /mnt/nas1/software/MD/amber_paramter_files,  must be required")
     parser.add_argument("-c", "--CMAP_path", nargs='?',type=str, default=default_cmap_path, help="Path to the CMAP master path, default is /mnt/nas1/software/MD/CMAP_files")
     parser.add_argument("-hyd", "--induced_hydrogen", nargs='?',type=int, choices=[0, 1], default=1, help="Use pdb4amber to reduce oridnally hydrogen, then add amber format hydrogens, default is True")
-    parser.add_argument("-solv", "--solvateions",nargs='?', type=int, choices=[0, 1], default=1, help="If enable solvations, Add water, counterions, salt ions, and periodic boundary conditions to the structure's topology, default is True")
+    parser.add_argument("-A", "--all_atom_force_field",nargs='?', type=int, choices=[0, 1], default=1, help="If enable all_atom_force_field, Add water, counterions, salt ions, and periodic boundary conditions to the structure's topology, default is True")
     parser.add_argument("-CMAP", "--CMAP", nargs='?', type=int, choices=[0, 1], default=0, help="If enable CMAP, induced charmm36 parameters for Amber prmtop file, default is False")
     parser.add_argument("-cyc", "--pepcyc", nargs='?', type=int, choices=[0, 1], default=0, help="If enable pepcyc, Connect any two amino acids at the beginning and end of a polypeptide so that their free amino and carboxyl groups form a peptide bond, must close CMAP, default is False")
     parser.add_argument("-cys", "--pepcys", nargs='?', type=int, choices=[0, 1], default=0, help="If enable pepcys, Connect any two cysteines in a polypeptide whose distance is greater than 2.05 Angstroms to form a disulfide bond between their sulfhydryl groups, support CMAP, default is False")
@@ -430,7 +445,7 @@ if __name__ == "__main__":
     parmter_file = args.parmter_file
     cmap_path = args.CMAP_path  # 修改为 CMAP_path，与命令行参数一致
     induced_hydrogen = bool(args.induced_hydrogen)
-    solvateions = bool(args.solvateions)
+    all_atom = bool(args.all_atom_force_field)
     CMAP = bool(args.CMAP)
     pepcyc = bool(args.pepcyc)
     pepcys = bool(args.pepcys)
@@ -455,4 +470,4 @@ if __name__ == "__main__":
     conc = 0.15
 
     # 调用 simulation 函数
-    simulation(work_path, parmter_file, cmap_path, cuda_device_id, induced_hydrogen, solvateions, CMAP, pepcyc, pepcys)
+    simulation(work_path, parmter_file, cmap_path, cuda_device_id, induced_hydrogen, all_atom, CMAP, pepcyc, pepcys)
