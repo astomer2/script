@@ -48,7 +48,7 @@ def write_result(result_path: Path, docking_results: list):
     result_file_path = result_path / "result.txt"
 
     with result_file_path.open("w") as result_file:
-        result_file.write("sequence\tmix\tmax\tavg\tmed\tvar\n")
+        result_file.write("sequence\tmix\tmax\tavg\tmed\tvar\tmachine_score\n")
 
         for name, scores in name_score_dict.items():
             min_score = np.min(scores)
@@ -61,6 +61,6 @@ def write_result(result_path: Path, docking_results: list):
             result_file.write(f"{name.upper()}\t{min_score}\t{max_score}\t{avg_score:.2f}\t{med_score:.2f}\t{var_score:.2f}\t{machine_score:.2f}\n")
 
 if __name__ == '__main__':
-    path = Path('/mnt/nas1/lanwei-125/PRLR/GA-generator/')    
+    path = Path('/mnt/nas1/lanwei-125/FGF5/GA_generator/')    
     docking_results = read_score(path)
     write_result(path, docking_results)
