@@ -77,6 +77,7 @@ def plot_RMSD_box():
     plt.savefig(RMSD_box,dpi = 600)
 
 def take_energy():
+
     with open(Energy, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         
@@ -84,7 +85,6 @@ def take_energy():
         
         for subdir in os.listdir(root_dir):
             filepath = os.path.join(root_dir, subdir, 'energy.dat')
-            
             if os.path.exists(filepath):
                 with open(filepath) as f:
                     for line in f:
