@@ -418,7 +418,7 @@ def analysis(work_path, reference,target):
 
     f.write("clear all \n")
     f.write("parm "+ complex_prmtop + " \n")  
-    f.write("trajin complex_md1.mdcrd \n")  
+    f.write("trajin complex_md.mdcrd \n")  
     f.write("strip :WAT,Na+,Cl- \n")
     f.write("autoimage \n")
     f.write("check .1,2 skipbadframes silent nobondcheck \n")

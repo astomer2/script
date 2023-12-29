@@ -1,6 +1,6 @@
 import os
 import time
-from click import File
+#from click import File
 from tqdm import tqdm
 import subprocess
 import collections
@@ -91,6 +91,6 @@ def main(subject, script_path):
         tqdm.write(f"进度：{progress:.2%}")
 
 if __name__ == "__main__":
-    subject_dir = "/mnt/nas1/lanwei-125/FGF5/disulfide_peptide_cluster/MD/"
-    script_path = "/home/weilan/script/MD/run_simulation.py"
+    subject_dir = "/mnt/nas1/lanwei-125/PRLR/MD/v2/"
+    script_path = "/home/weilan/softwares/script/MD/run_simulation.py"
     main(subject_dir, script_path)
