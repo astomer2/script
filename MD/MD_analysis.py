@@ -2,7 +2,7 @@ import os
 import csv
 import pandas as pd
 import matplotlib.pyplot as plt
-
+from pathlib import Path
 
 def draw_RMSD_line():
     
@@ -117,6 +117,34 @@ def draw_energy_error_plot():
     plt.xticks(rotation=-65)
     plt.savefig(energy_error_plot, dpi=600)
 
+def residue_contribution():
+    for subdir in os.listdir(root_dir):
+        file_path = os.path.join(root_dir, subdir, 'decomp-energy.dat')
+        data = pd.read_csv(file_path, skiprows=8, delimiter=',',header=None, engine='python')
+        a = data[0].str.split(expand=True, n=1)
+        data['Residue ID'] = a[0]
+        data['ids'] = a[1]
+        residue_info = data[1].str.split(expand=True, n=2)
+        data['chain ID'] = residue_info[0]
+        data['Amino Acid'] = residue_info[1]
+        data['Residue_ID'] = residue_info[2]
+        data = data.drop([0, 1], axis=1)
+        data["energy"] = data[5]
+        # 提取所需列（以Residue列为x轴，Avg.列为y轴）
+        data_subset = data.iloc[131:]
+        residue_ids = data_subset['Residue_ID']
+        energy_contributions = data_subset['energy']
+        # 绘制图表
+        plt.plot(residue_ids, energy_contributions, label=subdir)
+        # 设置图表标题和标签
+        plt.title('Energy Contributions of Amino Acid Residues')
+        plt.xlabel('Peptide Residue ID')
+        plt.ylabel('Energy Contribution (Kcal/mol)')
+        # 显示图例
+        plt.legend()
+        # 显示图表
+        plt.savefig(os.path.join(root_dir, subdir+'_residue_contribution.png'))
+
 
 if __name__ == '__main__':
     root_dir = '/mnt/nas1/lanwei-125/FGF5/disulfide_peptide_cluster/MD/'
@@ -128,3 +156,4 @@ if __name__ == '__main__':
     draw_RMSD_line()
     plot_RMSD_box()
     draw_energy_error_plot()
+    residue_contribution()
