@@ -78,7 +78,7 @@ def main(subject, script_path):
         if gpu_ids:
             gpu_id = gpu_ids.popleft()
             work_path = tasks_queue.popleft()
-            if os.path.exists(f"{now_time} {work_path}/mdinfo"):
+            if os.path.exists(f"{work_path}/mdinfo"):
                 ran_task.append(work_path)
                 logging.info(f"{now_time} {work_path} 已经运行，跳过")
                 continue
@@ -92,5 +92,5 @@ def main(subject, script_path):
 
 if __name__ == "__main__":
     subject_dir = "/mnt/nas1/lanwei-125/PRLR/MD/v2/"
-    script_path = "/home/weilan/softwares/script/MD/run_simulation.py"
+    script_path = "/home/weilan/script/MD/run_simulation.py"
     main(subject_dir, script_path)
