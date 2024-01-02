@@ -8,7 +8,7 @@ import logging
 from pynvml.smi import nvidia_smi
 from pathlib import Path
 # 常量
-
+now_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
 # 初始化日志
 logging.basicConfig(level=logging.INFO)
@@ -48,7 +48,7 @@ def run_command(script_path, work_path, gpu_id):
 
     command = (f"nohup python3  {script_path} -i {work_path} -g {gpu_id} -CMAP 1 > {work_path}.log 2>&1 &")
     os.system(command)
-    logging.info(f"运行命令：{command}")
+    logging.info(f"{now_time} 运行命令：{command}")
 
 def output_log(tasks):
 
@@ -72,15 +72,15 @@ def main(subject, script_path):
         tasks = [task for task in tasks_list if task not in ran_task]
         tasks_queue = collections.deque(tasks)
         if not gpu_ids:
-            logging.info("没有可用的 GPU，等待 45 秒后重试...")
+            logging.info(f"{now_time} 没有可用的 GPU，等待 45 秒后重试...")
             gpu_ids = collections.deque(determine_available_gpu())
 
         if gpu_ids:
             gpu_id = gpu_ids.popleft()
             work_path = tasks_queue.popleft()
-            if os.path.exists(f"{work_path}/mdinfo"):
+            if os.path.exists(f"{now_time} {work_path}/mdinfo"):
                 ran_task.append(work_path)
-                logging.info(f"{work_path} 已经运行，跳过")
+                logging.info(f"{now_time} {work_path} 已经运行，跳过")
                 continue
             else:            
                 run_command(script_path, work_path, gpu_id)
@@ -88,7 +88,7 @@ def main(subject, script_path):
             
         # 使用 tqdm 创建进度条，总任务数为 len(tasks)，len(ran_task) 为已经运行的任务数，使用这两个值作为tqdm进度
         progress = len(ran_task) / len(tasks_list)
-        tqdm.write(f"进度：{progress:.2%}")
+        tqdm.write(f"{now_time} 进度：{progress:.2%}")
 
 if __name__ == "__main__":
     subject_dir = "/mnt/nas1/lanwei-125/PRLR/MD/v2/"
