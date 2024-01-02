@@ -78,7 +78,7 @@ def main(subject, script_path):
         if gpu_ids:
             gpu_id = gpu_ids.popleft()
             work_path = tasks_queue.popleft()
-            if os.path.exists(f"{work_path}/mdinfo"):
+            if os.path.exists(os.path.join(work_path, "mdinfo")):
                 ran_task.append(work_path)
                 logging.info(f"{now_time} {work_path} 已经运行，跳过")
                 continue
