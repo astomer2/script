@@ -61,6 +61,6 @@ def write_result(result_path: Path, docking_results: list):
             result_file.write(f"{name.upper()}\t{min_score}\t{max_score}\t{avg_score:.2f}\t{med_score:.2f}\t{var_score:.2f}\t{machine_score:.2f}\n")
 
 if __name__ == '__main__':
-    path = Path('/mnt/nas1/lanwei-125/FGF5/GA_generator/')    
+    path = Path('/mnt/nas1/lanwei-125/TGFbR2/dock/v2/')    
     docking_results = read_score(path)
     write_result(path, docking_results)

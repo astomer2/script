@@ -435,8 +435,8 @@ def analysis(work_path, reference,target):
     f.write("go \n")
     f.write("quit \n")
     f.close()
-
     os.system("cpptraj -i cpptraj.in")
+    
     os.system("MMPBSA.py -O -i mmpbsa.in -o energy.dat -do decomp-energy.dat -sp fixed.prmtop -cp complex.prmtop -rp protein.prmtop -lp peptide.prmtop -y fixed.mdcrd")
     os.system("MMPBSA.py --clean")
 

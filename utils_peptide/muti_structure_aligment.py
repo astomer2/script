@@ -114,13 +114,13 @@ def alignment_pdb_from_reference(start_id, end_id, reference_chain_id, reference
             superimpose_atoms(chain_id, ref_atoms, alignment_atoms, alignment_model, output_folder, alignment_pdb)
 
 if __name__ == "__main__":
-    reference_path ='/mnt/nas1/lanwei-125/FGF5/dock_prepare/FGF5.pdb'
-    pdb_path = '/mnt/nas1/lanwei-125/FGF5/FGF5_all_cyc/'
+    reference_path ='/mnt/nas1/lanwei-125/FGF5/disulfide/FGF5_all_cys/FGF5.pdb'
+    pdb_path = '/mnt/nas1/lanwei-125/FGF5/disulfide/FGF5_all_cys/'
 
     start_id = 1
     end_id = 131
     reference_chain_id = 'A'
 
     aligment_chain_id = 'B'
-    output_folder = '/mnt/nas1/lanwei-125/FGF5/disulfide_peptide'
+    output_folder = '/mnt/nas1/lanwei-125/FGF5/disulfide/disulfide_peptide'
     alignment_pdb_from_reference(start_id, end_id, reference_chain_id, reference_path, pdb_path, aligment_chain_id, output_folder)

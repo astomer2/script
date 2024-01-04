@@ -6,9 +6,19 @@ import subprocess
 import time
 import argparse
 import multiprocessing
-from tqdm import tqdm  # Import tqdm for a progress bar
+from tqdm import tqdm 
+import logging
+import time
 
-class ABian:
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+now_times = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+
+class ADCP:
     def __init__(self, txt_path, config_file_path, model_num, num_steps, core_num, repeat_times, work_path, cyclic, cystein):
         print("*************程序开始执行*************")
         print("--start time:%s--\n" % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
@@ -70,7 +80,7 @@ class ABian:
         with open(self.txt_path, encoding='utf-8') as r_file:
             task_count = sum(1 for _ in r_file)  # Count the number of lines in the file
 
-        with tqdm(total=task_count, desc="Processing", ncols=100) as pbar:
+        with tqdm(total=task_count*self.repeat_times, desc="Processing", ncols=100) as pbar:
             with open(self.txt_path, encoding='utf-8') as r_file:
 
                 for line in r_file.readlines():
@@ -90,11 +100,11 @@ class ABian:
 
 def main():
     parser = argparse.ArgumentParser(description="Run amber simulation with specified parameters")
-    parser.add_argument("-t", "--txt_path", required=True, help="Path to the txt file")
-    parser.add_argument("-c", "--config_file_path", required=True, help="Path to the config file")
+    parser.add_argument("-i", "--txt_path", required=True, help="Path to the txt file")
+    parser.add_argument("-t", "--config_file_path", required=True, help="Path to the config file")
     parser.add_argument("-m", "--model_num", type=int, required=True, help="Model number")
     parser.add_argument("-n", "--num_steps", type=int, required=True, help="Number of steps")
-    parser.add_argument("-p", "--core_num", type=int, required=True, help="Number of cores")
+    parser.add_argument("-c", "--core_num", type=int, required=True, help="Number of cores")
     parser.add_argument("-r", "--repeat_times", type=int, required=True, help="Repeat times")
     parser.add_argument("-w", "--work_path", required=True, help="Path to the work directory")
     parser.add_argument(
@@ -109,8 +119,8 @@ def main():
 
     args = parser.parse_args()
 
-    abian = ABian(args.txt_path, args.config_file_path, args.model_num, args.num_steps, args.core_num, args.repeat_times, args.work_path, args.cyclic, args.cystein)
-    abian.run()
+    adcp = ADCP(args.txt_path, args.config_file_path, args.model_num, args.num_steps, args.core_num, args.repeat_times, args.work_path, args.cyclic, args.cystein)
+    adcp.run()
 
 if __name__ == '__main__':
     main()

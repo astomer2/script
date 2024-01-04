@@ -166,7 +166,8 @@ def calculate_descriptors(input_file, output_file, columns_index, sheet_name):
         # 读取TXT
         with open(input_file, 'r') as file:
             for line in file:
-                sequences.append(line.strip())
+                line = line.upper().strip()
+                sequences.append(line)
     elif input_file.endswith('.xlsx'):
         # 读取XLSX
         df = pd.read_excel(input_file, sheet_name=sheet_name, header=0)
@@ -189,7 +190,7 @@ def calculate_descriptors(input_file, output_file, columns_index, sheet_name):
                   'Charge', 
                   #'ChargeDensity', 
                   'pI', 
-                  #'InstabilityInd', 
+                  'InstabilityInd', 
                   #'Aromaticity', 
                   #'AliphaticInd', 
                   #'BomanInd', 
@@ -197,9 +198,9 @@ def calculate_descriptors(input_file, output_file, columns_index, sheet_name):
                   'gravy',
                   'alpha-helix propensity',
                   #'side chains into lipid',
-                  'Alipha-helix propensity',
-                  'Reverse turn',
-                  'Beta-sheet propensity',
+                  #'Alipha-helix propensity',
+                  #'Reverse turn',
+                  #'Beta-sheet propensity',
                   'LogP',
                   'LogD',
                   'logKp',
@@ -242,7 +243,7 @@ def calculate_descriptors(input_file, output_file, columns_index, sheet_name):
                 desc.descriptor[0][2],       # Charge
                 #desc.descriptor[0][3],       # ChargeDensity
                 desc.descriptor[0][4],       # pI
-                #desc.descriptor[0][5],       # InstabilityInd
+                desc.descriptor[0][5],       # InstabilityInd
                 #desc.descriptor[0][6],       # Aromaticity
                 #desc.descriptor[0][7],       # AliphaticInd
                 #desc.descriptor[0][8],       # BomanInd
@@ -250,9 +251,9 @@ def calculate_descriptors(input_file, output_file, columns_index, sheet_name):
                 pepdesc.descriptor[0][0],   # gravy
                 alpha.descriptor[0][0],       # levitt_alpha
                 #side_chains.descriptor[0][0], # side chains into lipid
-                sec_propensity[0],       # Alipha-helix propensity
-                sec_propensity[1],       # Reverse turn
-                sec_propensity[2],        # Beta-sheet propensity
+                #sec_propensity[0],       # Alipha-helix propensity
+                #sec_propensity[1],       # Reverse turn
+                #sec_propensity[2],        # Beta-sheet propensity
                 log_values[0],        # LogP
                 log_values[1],        # LogD
                 Skin_penetration_rate[0],        # logKp
@@ -268,8 +269,8 @@ def calculate_descriptors(input_file, output_file, columns_index, sheet_name):
 
 # 指定输入和输出文件的路径
 if __name__ == "__main__":
-    input_file = '/mnt/nas1/lanwei-125/TGFbR2/TGFBR2-adcp-result-sort.xlsx'
-    output_file ='/mnt/nas1/lanwei-125/TGFbR2/TGFBR2-ph.csv'
+    input_file = '/mnt/nas1/lanwei-125/TGFbR2/dock/v2/seq.txt'
+    output_file ='/mnt/nas1/lanwei-125/TGFbR2/dock/v2/seq.csv'
     columns_index = 0
     sheet_name = 'phsical_properties'
     # 计算描述符并保存结果到CSV文件
