@@ -504,11 +504,11 @@ def main(protein_pdb, peptide_pdb_dir, cluster_path , random_peptides):
 
 if __name__ == "__main__":
     protein_pdb = "/mnt/nas1/lanwei-125/FGF5/dock_prepare/FGF5.pdb"
-    peptide_pdb_dir = "/mnt/nas1/lanwei-125/FGF5/disulfide_peptide/"
-    cluster_path = "/mnt/nas1/lanwei-125/FGF5/disulfide_peptide_cluster/"
+    peptide_pdb_dir = "/mnt/nas1/lanwei-125/FGF5/disulfide/HPEP/hpep-result/"
+    cluster_path = "/mnt/nas1/lanwei-125/FGF5/disulfide/HPEP/HPEP_cluster/"
 
-    HPEP = False  # if your structures are from HPEP, set it to True, else set it to False
-    ADCP = True   # if your structures are from ADCP, set it to True, else set it to False
+    HPEP = True  # if your structures are from HPEP, set it to True, else set it to False
+    ADCP = False   # if your structures are from ADCP, set it to True, else set it to False
 
     peptide_number = 70 #set the number of peptides you want，if HPEP and ADCP is False, it will be ramdomly selected 
     contact_cutoff = 7  # 6 angstroms

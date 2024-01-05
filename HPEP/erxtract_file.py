@@ -87,7 +87,7 @@ def analyze_scores(folder_path):
 
 
 if __name__ == "__main__":
-    folder_path = "/mnt/nas1/lanwei-125/IL8/v4/HPEP/IL8-monomer/"
-    output_folder = "/mnt/nas1/lanwei-125/IL8/v4/HPEP/IL8-monomer/"
+    folder_path = "/mnt/nas1/lanwei-125/FGF5/disulfide/HPEP/"
+    output_folder = "/mnt/nas1/lanwei-125/FGF5/disulfide/HPEP/"
     multiple_extraction(folder_path, output_folder)
     analyze_scores(folder_path)

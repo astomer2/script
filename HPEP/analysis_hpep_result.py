@@ -36,7 +36,7 @@ def analyze_scores():
 
 if __name__ == "__main__":
 
-    input_file = "/mnt/nas1/lanwei-125/IL8/v4/HPEP/IL8-dimer/"
+    input_file = "/mnt/nas1/lanwei-125/FGF5/disulfide/HPEP/"
 
     analyze_scores()
     print("输出成功")

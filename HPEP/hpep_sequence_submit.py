@@ -19,7 +19,7 @@ def submit_sequence(page, seq_list):
     fasta_seq = page.ele((By.XPATH, '//*[@id="fastaseq2"]'))
     fasta_seq.input('\n'.join(seq_list))
     time.sleep(1.5)
-'''
+
 def submit_receptor(page, Receptor_file):
     pdb_file = page.ele((By.XPATH,'//*[@id="pdbfile1"]'))
     pdb_file.input(Receptor_file)
@@ -32,7 +32,7 @@ def submit_receptor(page, Receptor_file):
     page.ele((By.XPATH,'//*[@id="pdbfile1"]')).click()
     page.wait.upload_paths_inputted()
     time.sleep(1.5)
-
+'''
 
 def submit_optional(page):
     sub_optional = page.ele((By.XPATH,'//*[@id="option1"]'))
@@ -55,11 +55,12 @@ def save_result(page, log_file):
     with open(log_file, 'a') as f:
         f.write(url + ' ' + current_time + '\n')
 
-def run(seq_file, Receptor_file, log_file, reference_file):
+def HPEP(seq_file, Receptor_file, log_file, reference_file):
     seq_groups = read_sequences(seq_file)
     url = 'http://huanglab.phys.hust.edu.cn/hpepdock/'
     driver = ChromiumOptions().set_paths(browser_path='/snap/bin/chromium')
     driver.set_argument('--headless')
+    driver.set_proxy('http://192.168.1.20:7890')
     page = ChromiumPage(addr_driver_opts=driver)
     for i, seq_list in enumerate(tqdm(seq_groups)):
         page.get(url)
@@ -73,10 +74,9 @@ def run(seq_file, Receptor_file, log_file, reference_file):
         submit_task(page)
         save_result(page, log_file)
     page.quit()
+    
 '''
-if __name__ == '__main__':
-    
-    
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-s', '--seq', type=str, help='sequence file')
     parser.add_argument('-r', '--receptor', type=str, help='receptor file')
@@ -87,13 +87,13 @@ if __name__ == '__main__':
     Receptor_file = args.receptor
     log_file = args.log
     reference_file = args.reference
-    
-    run(seq_file, Receptor_file, log_file, reference_file)
+
 '''
 
 if __name__ == '__main__':
+    
     seq_file = "/mnt/nas1/lanwei-125/PRLR/GA-generator/HPEP/test.txt"
     Receptor_file = "/mnt/nas1/lanwei-125/PRLR/structure_prepare/PRLR.pdb"
     log_file =  "/mnt/nas1/lanwei-125/PRLR/GA-generator/HPEP/log.txt"
     reference_file = ""
-    run(seq_file, Receptor_file, log_file, reference_file)
+    HPEP(seq_file, Receptor_file, log_file, reference_file)
