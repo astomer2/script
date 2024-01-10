@@ -3,6 +3,7 @@ import csv
 import pandas as pd
 import matplotlib.pyplot as plt
 from pathlib import Path
+from numpy import around
 
 def draw_RMSD_line():
     
@@ -145,6 +146,41 @@ def residue_contribution():
         # 显示图表
         plt.savefig(os.path.join(root_dir, subdir+'_residue_contribution.png'))
 
+def read_contacts(path,columns):
+    nativate_contact = pd.read_csv(path, header=None)
+    residue_info = nativate_contact[0].str.split(expand=True, n=4)
+
+    residue_info.columns = residue_info.iloc[0]
+    residue_info = residue_info[1:]
+    filtered_df = residue_info[residue_info['TotalFrac'].astype(float) > 0.1]
+    contact_res= (filtered_df.iloc[:,columns].astype(int)).tolist()
+    
+    return set(contact_res)
+
+def contact(root_dir):
+    root_dir = Path(root_dir)
+    ref = Path('/mnt/nas1/lanwei-125/FGF5/FGF5-pos/FGFR1/contact_frac_byres.dat')
+    ref = set(x-225 for x in read_contacts(ref,1))
+    print(type(ref))
+    rates = []
+    for path in root_dir.iterdir():
+        if path.is_dir():
+            contact_dat = path/'contact_frac_byres.dat'
+            if contact_dat.exists():
+                contact = read_contacts(contact_dat,0)
+                #print(type(contact))
+                print(len(contact & ref))
+                rate = len(contact & ref)/len(ref)
+                a= path.stem , around(rate,3)
+                rates.append(a)
+    with open ('/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/MD/pos/contact_rate.csv', 'w') as f:
+        csv_writer = csv.writer(f)
+        
+        # 写入表头
+        csv_writer.writerow(['Folder', 'Rate'])
+
+        # 写入数据
+        csv_writer.writerows(rates)
 
 if __name__ == '__main__':
     root_dir = '/mnt/nas1/lanwei-125/PRLR/MD/v2/'
@@ -152,6 +188,8 @@ if __name__ == '__main__':
     RMSD_box = f'{root_dir}/RMSD_box.png'
     Energy = f'{root_dir}/energy.csv'
     energy_error_plot = f'{root_dir}/energy_error_plot.png'
+    contact_rate = f'{root_dir}/contact_rate.csv'
+    contact(root_dir)
     take_energy()
     draw_RMSD_line()
     plot_RMSD_box()

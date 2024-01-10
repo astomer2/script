@@ -7,6 +7,7 @@ import collections
 import logging
 from pynvml.smi import nvidia_smi
 from pathlib import Path
+import argparse
 # 常量
 now_time = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
@@ -91,6 +92,10 @@ def main(subject, script_path):
         tqdm.write(f"{now_time} 进度：{progress:.2%}")
 
 if __name__ == "__main__":
-    subject_dir = "/mnt/nas1/lanwei-125/PRLR/MD/v2/"
-    script_path = "/home/weilan/script/MD/run_simulation.py"
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i","--subject_dir", type=str, help="The directory of the subject")
+    parser.add_argument("-s","--script_path", type=str, help="The path of the run_simulation.py script")
+    args = parser.parse_args()
+    subject_dir = args.subject_dir
+    script_path = args.script_path
     main(subject_dir, script_path)

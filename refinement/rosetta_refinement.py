@@ -6,7 +6,7 @@ import pandas as pd
 import argparse
 import logging
 import time
-
+from math import log, log10
 from pandas import DataFrame
 from pathlib import Path
 
@@ -54,7 +54,7 @@ def read_pdb(dir_path: str):
 
     return [str(cluster_dir_name) for cluster_dir_name in cluster_dir_names]
 
-#结构预处理，将残基命名，原子参数等设置正确，为多肽添加蛋白质，蛋白质添加在多肽之前。rosetta只能读取标注氨基酸命名，
+#结构预处理，将残基命名，原子参数等设置正确，为配体添加受体，受体添加在配体之前。rosetta只能读取标注氨基酸命名，
 #如果必须包含非标准氨基酸，则需要在flags文件中写明
 def preprocess_pdb(dir_path: str, protein_pdb: str, cluster_dir_names: list):
     """
@@ -137,8 +137,8 @@ def make_flag(dir_path: str, cluster_dir_names: list, protein_chain: str, peptid
         None
     """
     np_nums = str(np_nums)
-    protein_chain = str(protein_chain)
-    peptide_chain = str(peptide_chain)
+    protein_chain_id = str(protein_chain)
+    peptide_chain_id = str(peptide_chain)
     for cluster_dir_name in cluster_dir_names:
 
         for file in (Path(dir_path) / cluster_dir_name).glob('*.pdb'):
@@ -166,8 +166,8 @@ def make_flag(dir_path: str, cluster_dir_names: list, protein_chain: str, peptid
                 f=open('refinement.flags', 'w')
                 f.write("-s "+ ref_pdb + "_0001.pdb \n")
                 #f.write("-native "+ peptide + ".pdb \n")
-                f.write("-flexPepDocking:receptor_chain "+protein_chain+" \n")
-                f.write("-flexPepDocking:peptide_chain "+peptide_chain+" \n")
+                f.write("-flexPepDocking:receptor_chain "+protein_chain_id+" \n")
+                f.write("-flexPepDocking:peptide_chain "+peptide_chain_id+" \n")
                 f.write("-pep_refine \n")
                 f.write("-use_input_sc \n")
                 f.write("-nstruct 250 \n")
@@ -204,7 +204,7 @@ def take_candidate(cluster_dir_names: list, result_path: Path):
     - result_path (str): The path to the result directory.
 
     Returns:
-    - None
+    - files path that contains the candidate pdb files.
     """
     result_path = Path(result_path)
 
@@ -242,6 +242,7 @@ def take_candidate(cluster_dir_names: list, result_path: Path):
             result_score_file = result_path / 'candidate.txt'
             with open(result_score_file, 'a') as f:
                 f.write(f"{min_row['description']}\t{min_row['reweighted_sc']}\n")
+    return result_score_file
 
 # 局部细化后处理
 def process_refine_pdb(result_path):
@@ -277,13 +278,41 @@ def process_refine_pdb(result_path):
             with open(candidate_pdb_path, 'w') as f:
                 f.write(''.join(candidate_pdb))
 
+def extract_pdb(candidate_txt):
+    
+    candidate_txt = Path("")
+    with open(candidate_txt, 'r') as f:
+        lines = f.readlines()
+        c = []
+    for line in lines:
+        a = line.split()[0].split("-")[0]
+        b = line.split()[1]
+        if log10(abs(float(b))) < 4:
+            newline = a + " " + b 
+            c.append(newline)
+    df1 = pd.DataFrame(c)
+    d = df1[0].str.split(' ', expand=True)
+    df1['seq'] = d[0]
+    df1['value'] = d[1]
+    df1 = df1.drop(columns=[0])
+    df1.sort_values(by=['value'], inplace=True,ascending=False)
+    df1 = df1.reset_index(drop=True)
+    df1 = df1.iloc[:,50:]
+    for seq in df1['seq']:
+        os.umask(0) 
+        HPEP = candidate_txt.parent/(seq + ".pdb")
+        hpep_md = "/mnt/nas1/lanwei-125/FGF5/disulfide/MD/HPEP/"
+        os.makedirs(hpep_md, exist_ok=True)
+        shutil.copy(HPEP, hpep_md)
+
 
 def run_refinement(dir_path, result_path, protein_pdb, np_nums):
     cluster_dir_names = read_pdb(dir_path)
     protein_chain, peptide_chain = preprocess_pdb(dir_path, protein_pdb, cluster_dir_names)
     make_flag(dir_path, cluster_dir_names, protein_chain, peptide_chain, np_nums)
-    take_candidate(cluster_dir_names, result_path)
+    result_score_file =take_candidate(cluster_dir_names, result_path)
     process_refine_pdb(result_path)
+    extract_pdb( result_score_file)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='after clustering, run refinement, use rosetta to refine the pdb, choose the best one as the final pdb')

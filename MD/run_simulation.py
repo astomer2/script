@@ -378,15 +378,15 @@ def run_simulation(cuda_device_id ,CMAP ,cmap_path, all_atom):
     #maybe write a loop?
 
     os.system(f"pmemd.cuda -O -i 01.in -o min1.out -p {complex_prmtop} -c complex_solvated.inpcrd -r complex_01.rst -ref complex_solvated.inpcrd")
-    os.system(f"pmemd.cuda -O -i 02.in -o min2.out -p {complex_prmtop} -c complex_01.rst -r complex_02.rst -x complex_02.mdcrd -ref complex_01.rst")
-    os.system(f"pmemd.cuda -O -i 03.in -o min3.out -p {complex_prmtop} -c complex_02.rst -r complex_03.rst -x complex_03.mdcrd -ref complex_02.rst")
-    os.system(f"pmemd.cuda -O -i 04.in -o min4.out -p {complex_prmtop} -c complex_03.rst -r complex_04.rst -x complex_04.mdcrd -ref complex_03.rst")
-    os.system(f"pmemd.cuda -O -i 05.in -o min5.out -p {complex_prmtop} -c complex_04.rst -r complex_05.rst -x complex_05.mdcrd -ref complex_04.rst")
+    os.system(f"pmemd.cuda -O -i 02.in -o min2.out -p {complex_prmtop} -c complex_01.rst -r complex_02.rst -x complex_02.nc -ref complex_01.rst")
+    os.system(f"pmemd.cuda -O -i 03.in -o min3.out -p {complex_prmtop} -c complex_02.rst -r complex_03.rst -x complex_03.nc -ref complex_02.rst")
+    os.system(f"pmemd.cuda -O -i 04.in -o min4.out -p {complex_prmtop} -c complex_03.rst -r complex_04.rst -x complex_04.nc -ref complex_03.rst")
+    os.system(f"pmemd.cuda -O -i 05.in -o min5.out -p {complex_prmtop} -c complex_04.rst -r complex_05.rst -x complex_05.nc -ref complex_04.rst")
     if all_atom:
-        os.system(f"pmemd.cuda -O -i 06.in -o min6.out -p {complex_prmtop} -c complex_05.rst -r complex_06.rst -x complex_06.mdcrd -ref complex_05.rst")
-        os.system(f"pmemd.cuda -O -i 07.in -o min7.out -p {complex_prmtop} -c complex_06.rst -r complex_07.rst -x complex_07.mdcrd -ref complex_06.rst")
-        os.system(f"pmemd.cuda -O -i 08.in -o min8.out -p {complex_prmtop} -c complex_07.rst -r complex_08.rst -x complex_08.mdcrd -ref complex_07.rst")
-        os.system(f"pmemd.cuda -O -i 09.in -o md1.out -p {complex_prmtop} -c complex_08.rst -r complex_md.rst -x complex_md.mdcrd -ref complex_08.rst")
+        os.system(f"pmemd.cuda -O -i 06.in -o min6.out -p {complex_prmtop} -c complex_05.rst -r complex_06.rst -x complex_06.nc -ref complex_05.rst")
+        os.system(f"pmemd.cuda -O -i 07.in -o min7.out -p {complex_prmtop} -c complex_06.rst -r complex_07.rst -x complex_07.nc -ref complex_06.rst")
+        os.system(f"pmemd.cuda -O -i 08.in -o min8.out -p {complex_prmtop} -c complex_07.rst -r complex_08.rst -x complex_08.nc -ref complex_07.rst")
+        os.system(f"pmemd.cuda -O -i 09.in -o md1.out -p {complex_prmtop} -c complex_08.rst -r complex_md.rst -x complex_md.nc -ref complex_08.rst")
 
 
 
@@ -415,29 +415,30 @@ def analysis(work_path, reference,target):
     f.write("parmbox nobox \n")
     f.write("parmwrite out fixed.prmtop \n")
     f.write("go \n")
-
     f.write("clear all \n")
+
     f.write("parm "+ complex_prmtop + " \n")  
-    f.write("trajin complex_md.mdcrd \n")  
+    f.write("trajin complex_md.nc \n")  
     f.write("strip :WAT,Na+,Cl- \n")
     f.write("autoimage \n")
     f.write("check .1,2 skipbadframes silent nobondcheck \n")
-    f.write("trajout fixed.mdcrd nobox \n")
+    f.write("trajout fixed.nc nobox \n")
     f.write("go \n")
 
     f.write("clear all \n")
     f.write("parm fixed.prmtop \n")
-    f.write("trajin fixed.mdcrd \n")
+    f.write("trajin fixed.nc \n")
     f.write("align :"+reference+"@CA first  \n")
     f.write("rms pep :"+target+"@CA nofit out complex_rmsd.xvg \n")
     f.write("trajout out.pdb offset 500 \n")
     f.write("hbond donormask :"+reference+" acceptormask :"+target+" out nhb.dat avgout acghb.dat \n")
+    f.write("nativecontacts :"+reference+" :"+target+" byresidue distance 7 resout contact_frac_byres.dat \n")
     f.write("go \n")
     f.write("quit \n")
     f.close()
     os.system("cpptraj -i cpptraj.in")
     
-    os.system("MMPBSA.py -O -i mmpbsa.in -o energy.dat -do decomp-energy.dat -sp fixed.prmtop -cp complex.prmtop -rp protein.prmtop -lp peptide.prmtop -y fixed.mdcrd")
+    os.system("MMPBSA.py -O -i mmpbsa.in -o energy.dat -do decomp-energy.dat -sp fixed.prmtop -cp complex.prmtop -rp protein.prmtop -lp peptide.prmtop -y fixed.nc")
     os.system("MMPBSA.py --clean")
 
 

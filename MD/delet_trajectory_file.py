@@ -1,6 +1,5 @@
 import os
 
-from sklearn.manifold import MDS 
 
 
 def find_trajectory_flie(dir_path):
