@@ -1,11 +1,13 @@
 import os
 import csv
 import pandas as pd
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt 
 from pathlib import Path
 from numpy import around
-
-def draw_RMSD_line():
+import sys 
+sys.path.append(os.path.abspath('.'))
+from utils_peptide.residue_num import get_residue_num
+def draw_RMSD_line(root_dir, RMSD_line):
     
     # 设置图形大小
     plt.figure(figsize=(15,8)) 
@@ -37,12 +39,12 @@ def draw_RMSD_line():
     plt.ylabel('RMSD (nm)') 
 
     # 设置图例
-    plt.legend(loc = 'upper center',bbox_to_anchor=(0.5, 1.15), ncol = 5 )
-
+    plt.legend(loc = 'upper center',bbox_to_anchor=(0.5, 1.25), ncol = 5 )
+    plt.tight_layout() 
     # 保存图像
     plt.savefig(RMSD_line,dpi = 600)
 
-def plot_RMSD_box():
+def plot_RMSD_box(root_dir, RMSD_box):
     plt.figure(figsize=(15,12))
     # 存储所有RMSD值的列表
     all_rmsd = []
@@ -72,12 +74,13 @@ def plot_RMSD_box():
     # 绘制箱线图
     plt.figure()
     df.boxplot(flierprops = {'marker':'o', 'markersize':1})
-    plt.xticks(rotation=-35,size = 6)
+    plt.xticks(rotation=-90,size = 7)
     plt.ylabel('RMSD (nm)')
     plt.grid(False)
+    plt.tight_layout() 
     plt.savefig(RMSD_box,dpi = 600)
 
-def take_energy():
+def take_energy(Energy):
 
     with open(Energy, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
@@ -95,7 +98,7 @@ def take_energy():
                             std = fields[3]  
                             writer.writerow([subdir, avg, std])
 
-def draw_energy_error_plot():
+def draw_energy_error_plot(Energy, energy_error_plot):
     energies = []  
     sequences = []
     with open(Energy) as f:
@@ -115,37 +118,49 @@ def draw_energy_error_plot():
                 yerr=[std for avg, std in energies], fmt='o',  capsize= 5 )
     ax.set_xlabel('Sequence')  
     ax.set_ylabel('Energy (Kcal/mol)')
-    plt.xticks(rotation=-65)
+    plt.xticks(rotation=-90,size = 7)
+    plt.tight_layout() 
     plt.savefig(energy_error_plot, dpi=600)
 
-def residue_contribution():
-    for subdir in os.listdir(root_dir):
-        if os.path.isdir(os.path.join(root_dir, subdir)):
-            file_path = os.path.join(root_dir, subdir, 'decomp-energy.dat')
-            data = pd.read_csv(file_path, skiprows=8, delimiter=',',header=None, engine='python')
-            a = data[0].str.split(expand=True, n=1)
-            data['Residue ID'] = a[0]
-            data['ids'] = a[1]
-            residue_info = data[1].str.split(expand=True, n=2)
-            data['chain ID'] = residue_info[0]
-            data['Amino Acid'] = residue_info[1]
-            data['Residue_ID'] = residue_info[2]
-            data = data.drop([0, 1], axis=1)
-            data["energy"] = data[5]
-            # 提取所需列（以Residue列为x轴，Avg.列为y轴）
-            data_subset = data.iloc[131:]
-            residue_ids = data_subset['Residue_ID']
-            energy_contributions = data_subset['energy']
-            # 绘制图表
-            plt.plot(residue_ids, energy_contributions, label=subdir)
-            # 设置图表标题和标签
-            plt.title('Energy Contributions of Amino Acid Residues')
-            plt.xlabel('Peptide Residue ID')
-            plt.ylabel('Energy Contribution (Kcal/mol)')
-            # 显示图例
-            plt.legend()
-            # 显示图表
-            plt.savefig(os.path.join(root_dir, subdir+'_residue_contribution.png'))
+def residue_contribution(root_dir):
+    root_dir = Path(root_dir)
+    for subdir in root_dir.iterdir():
+        if subdir.is_dir():
+            if not os.path.exists(subdir / 'decomp-energy.dat'):
+                continue
+            else:
+                file_path = subdir / 'decomp-energy.dat'
+                data = pd.read_csv(file_path, skiprows=8, delimiter=',',header=None, engine='python')
+
+                # 将第 0 列拆分为两个列
+                a = data[0].str.split(expand=True, n=1)
+                data['Residue ID'] = a[0]
+                data['ids'] = a[1]
+
+                # 将第 1 列拆分为三个列
+                residue_info = data[1].str.split(expand=True, n=2)
+                data['chain ID'] = residue_info[0]
+                data['Amino Acid'] = residue_info[1]
+                data['Residue_ID'] = residue_info[2]
+
+                # 删除第 0 列和第 1 列
+                data = data.drop([0, 1], axis=1)
+                data["energy"] = data[5]
+
+                # 提取所需列（以 Residue 列为 x 轴，Avg. 列为 y 轴）
+                data_subset = data.iloc[get_residue_num(subdir/'protein.pdb'):]
+                residue_ids = data_subset['Residue_ID']
+                energy_contributions = data_subset['energy']
+
+                # 绘制图表
+                plt.plot(residue_ids, energy_contributions, label=subdir)
+                plt.title('Energy Contributions of Amino Acid Residues')
+                plt.xlabel('Peptide Residue ID')
+                plt.ylabel('Energy Contribution (Kcal/mol)')
+                plt.legend()
+                plt.tight_layout() 
+                plt.savefig(subdir / '_residue_contribution.png')
+                plt.close()
 
 def read_contacts(path,columns):
     nativate_contact = pd.read_csv(path, header=None)
@@ -170,10 +185,8 @@ def contact(root_dir,ref_contact_data,contact_rate):
             contact_dat = path/'contact_frac_byres.dat'
             if contact_dat.exists():
                 contact = read_contacts(contact_dat,0)
-                #print(type(contact))
-                print(len(contact & ref))
                 rate = len(contact & ref)/len(ref)
-                a= path.stem , around(rate,3)
+                a= path.stem , around(rate,4)
                 rates.append(a)
     with open (contact_rate, 'w') as f:
         csv_writer = csv.writer(f)
@@ -186,7 +199,7 @@ def contact(root_dir,ref_contact_data,contact_rate):
 
 if __name__ == '__main__':
 
-    root_dir = '/mnt/nas1/lanwei-125/FGF5/disulfide/MD/HPEP/'
+    root_dir = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/MD/pos/'
 
     RMSD_line = f'{root_dir}/RMSD_line.png'
     RMSD_box = f'{root_dir}/RMSD_box.png'
@@ -195,9 +208,10 @@ if __name__ == '__main__':
     contact_rate = f'{root_dir}/contact_rate.csv'
     ref_contact_data = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/FGFR1/contact_frac_byres.dat'
 
-    take_energy()
-    draw_RMSD_line()
-    plot_RMSD_box()
-    draw_energy_error_plot()
-    residue_contribution()
+    take_energy(Energy)
+    draw_RMSD_line(root_dir, RMSD_line)
+    plot_RMSD_box(root_dir, RMSD_box)
+    draw_energy_error_plot(Energy,energy_error_plot)
+    residue_contribution(root_dir)
     contact(root_dir, ref_contact_data, contact_rate) #this maybe need ad-hoc modification
+    
