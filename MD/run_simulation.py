@@ -438,7 +438,7 @@ def analysis(work_path, reference,target):
     f.close()
     os.system("cpptraj -i cpptraj.in")
     
-    os.system("MMPBSA.py -O -i mmpbsa.in -o energy.dat -do decomp-energy.dat -sp fixed.prmtop -cp complex.prmtop -rp protein.prmtop -lp peptide.prmtop -y fixed.nc")
+    os.system("MMPBSA.py.MPI -O -i mmpbsa.in -o energy.dat -do decomp-energy.dat -sp fixed.prmtop -cp complex.prmtop -rp protein.prmtop -lp peptide.prmtop -y fixed.nc")
     os.system("MMPBSA.py --clean")
 
 
@@ -450,12 +450,13 @@ def simulation(
     os.chdir(work_path)
     peptide_structure = f'{work_path}/peptide.pdb'
     protein_structure = f'{work_path}/protein.pdb'
-    sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, all_atom, pepcyc ,pepcys, GC)
-    take_paramter_flie(parmter_file)
-    run_simulation(cuda_device_id, CMAP, cmap_path, all_atom)
-    protein_id ,reference = reference_id(protein_structure)
-    target = target_id(protein_id, peptide_structure)
-    analysis(work_path, reference, target)
+    if os.path.exists(peptide_structure) and os.path.exists(protein_structure):
+        sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, all_atom, pepcyc ,pepcys, GC)
+        take_paramter_flie(parmter_file)
+        run_simulation(cuda_device_id, CMAP, cmap_path, all_atom)
+        protein_id ,reference = reference_id(protein_structure)
+        target = target_id(protein_id, peptide_structure)
+        analysis(work_path, reference, target)
 
 
 if __name__ == "__main__":
@@ -469,26 +470,25 @@ if __name__ == "__main__":
     parser.add_argument("-g", "--cuda_device_id", nargs='?',type=int, default=default_cuda_device_id, help="CUDA device ID,  default is 0")
     parser.add_argument("-p", "--parmter_file", nargs='?', type=str, default=default_parmter_file, help="Path to the amber simulation parmter files, default is /mnt/nas1/software/MD/amber_paramter_files,  must be required")
     parser.add_argument("-c", "--CMAP_path", nargs='?',type=str, default=default_cmap_path, help="Path to the CMAP master path, default is /mnt/nas1/software/MD/CMAP_files")
-    parser.add_argument("-hyd", "--induced_hydrogen", nargs='?',type=int, choices=[0, 1], default=1, help="Use pdb4amber to reduce oridnally hydrogen, then add amber format hydrogens, default is True")
-    parser.add_argument("-A", "--all_atom_force_field",nargs='?', type=int, choices=[0, 1], default=1, help="If enable all_atom_force_field, Add water, counterions, salt ions, and periodic boundary conditions to the structure's topology, default is True")
-    parser.add_argument("-CMAP", "--CMAP", nargs='?', type=int, choices=[0, 1], default=0, help="If enable CMAP, induced charmm36 parameters for Amber prmtop file, default is False")
-    parser.add_argument("-cyc", "--pepcyc", nargs='?', type=int, choices=[0, 1], default=0, help="If enable pepcyc, Connect any two amino acids at the beginning and end of a polypeptide so that their free amino and carboxyl groups form a peptide bond, must close CMAP, default is False")
-    parser.add_argument("-cys", "--pepcys", nargs='?', type=int, choices=[0, 1], default=0, help="If enable pepcys, Connect any two cysteines in a polypeptide whose distance is greater than 2.05 Angstroms to form a disulfide bond between their sulfhydryl groups, support CMAP, default is False")
-    parser.add_argument("-GC", "--Coarse_graining", nargs='?', type=int, choices=[0, 1], default=0, help="If enable coarse graining, use the coarse graining algorithm to generate the coarse-grained protein, default is False, required pdb2pqr and cgconv perl script ")
-    # 解析命令行参数
+    parser.add_argument("-hyd", "--induced_hydrogen", action="store_true",default=True, help="Use pdb4amber to reduce oridnally hydrogen, then add amber format hydrogens, default is True")
+    parser.add_argument("-A", "--all_atom_force_field", action="store_true",default=True,  help="If enable all_atom_force_field, Add water, counterions, salt ions, and periodic boundary conditions to the structure's topology, default is True")
+    parser.add_argument("-C", "--CMAP", action="store_true",default=False, help="If enable CMAP, induced charmm36 parameters for Amber prmtop file, default is False")
+    parser.add_argument("-cyc", "--pepcyc", action="store_true",default=False, help="If enable pepcyc, Connect any two amino acids at the beginning and end of a polypeptide so that their free amino and carboxyl groups form a peptide bond, must close CMAP, default is False")
+    parser.add_argument("-cys", "--pepcys", action="store_true",default=False, help="If enable pepcys, Connect any two cysteines in a polypeptide whose distance is greater than 2.05 Angstroms to form a disulfide bond between their sulfhydryl groups, support CMAP, default is False")
+    parser.add_argument("-GC", "--Coarse_graining", action="store_true",default=False,  help="If enable coarse graining, use the coarse graining algorithm to generate the coarse-grained protein, default is False, required pdb2pqr and cgconv perl script ")
+# 解析命令行参数
     args = parser.parse_args()
 
-    # 设置参数
     work_path = args.work_path
     cuda_device_id = args.cuda_device_id
     parmter_file = args.parmter_file
     cmap_path = args.CMAP_path  # 修改为 CMAP_path，与命令行参数一致
-    induced_hydrogen = bool(args.induced_hydrogen)
-    all_atom = bool(args.all_atom_force_field)
-    CMAP = bool(args.CMAP)
-    pepcyc = bool(args.pepcyc)
-    pepcys = bool(args.pepcys)
-    GC = bool(args.Coarse_graining)
+    induced_hydrogen = args.induced_hydrogen
+    all_atom = args.all_atom_force_field
+    CMAP = args.CMAP
+    pepcyc = args.pepcyc
+    pepcys = args.pepcys
+    GC = args.Coarse_graining
 
     # 增加额外的判断
     if pepcyc and CMAP:
@@ -505,13 +505,9 @@ if __name__ == "__main__":
         raise ValueError("Error: When GC is True, CMAP must be False.")
 
     # 设置默认值
-
-    if parmter_file is None:
-        parmter_file = default_parmter_file
-    if cmap_path is None:
-        cmap_path = default_cmap_path
-    if cuda_device_id is None:
-        cuda_device_id = default_cuda_device_id
+    parmter_file = parmter_file or default_parmter_file
+    cmap_path = cmap_path or default_cmap_path
+    cuda_device_id = cuda_device_id or default_cuda_device_id
 
     # 盐浓度
     conc = 0.15

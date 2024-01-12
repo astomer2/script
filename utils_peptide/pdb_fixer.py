@@ -1,7 +1,7 @@
 import os
 from pdbfixer import PDBFixer
 from pathlib import Path
-from simtk.openmm.app import PDBFile
+from openmm.app import PDBFile
 
 def fixed_pdb_file(pdb_file) :
     """

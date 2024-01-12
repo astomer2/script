@@ -45,9 +45,9 @@ def determine_available_gpu():
     gpu_ids = list(set(gpu_ids_0) & set(gpu_ids_1) & set(gpu_ids_2) & set(gpu_ids_3))
     return gpu_ids
 
-def run_command(script_path, work_path, gpu_id):
-
-    command = (f"nohup python3  {script_path} -i {work_path} -g {gpu_id} -CMAP 1 > {work_path}.log 2>&1 &")
+def run_command(script_path, work_path, extra_functions, gpu_id):
+    extra_functions = ' '.join(['-' + x for x in extra_functions])
+    command = ("nohup python3 %s -i %s -g %s %s > %s.log 2>&1 &" % (script_path, work_path, gpu_id, extra_functions, work_path ))
     os.system(command)
     logging.info(f"{now_time} 运行命令：{command}")
 
@@ -62,7 +62,7 @@ def output_log(tasks):
         except FileNotFoundError:
             logging.warning(f"找不到任务 {task} 的日志文件")
 
-def main(subject, script_path):
+def main(subject, script_path,extra_functions):
     gpu_ids = collections.deque(determine_available_gpu()) 
     logging.info(gpu_ids)
     ran_task = []
@@ -84,7 +84,7 @@ def main(subject, script_path):
                 logging.info(f"{now_time} {work_path} 已经运行，跳过")
                 continue
             else:            
-                run_command(script_path, work_path, gpu_id)
+                run_command(script_path, work_path, extra_functions, gpu_id)
                 ran_task.append(work_path)
             
         # 使用 tqdm 创建进度条，总任务数为 len(tasks)，len(ran_task) 为已经运行的任务数，使用这两个值作为tqdm进度
@@ -92,10 +92,14 @@ def main(subject, script_path):
         tqdm.write(f"{now_time} 进度：{progress:.2%}")
 
 if __name__ == "__main__":
+    default_script_path = '/mnt/nas1/lanwei-125/script/MD/run_simulation.py'
     parser = argparse.ArgumentParser()
     parser.add_argument("-i","--subject_dir", type=str, help="The directory of the subject")
-    parser.add_argument("-s","--script_path", type=str, help="The path of the run_simulation.py script")
+    parser.add_argument("-s","--script_path", type=str,default=default_script_path, help="The path of the run_simulation.py script")
+    parser.add_argument("-ex","--extra_functions", type=str, nargs = "+",default="", help="The keyword of the extra functions,more detials plesase see the python run_simulation.py -h script")
+    
     args = parser.parse_args()
     subject_dir = args.subject_dir
     script_path = args.script_path
-    main(subject_dir, script_path)
+    extra_functions = args.extra_functions
+    main(subject_dir, script_path, extra_functions)

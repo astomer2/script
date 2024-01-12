@@ -120,31 +120,32 @@ def draw_energy_error_plot():
 
 def residue_contribution():
     for subdir in os.listdir(root_dir):
-        file_path = os.path.join(root_dir, subdir, 'decomp-energy.dat')
-        data = pd.read_csv(file_path, skiprows=8, delimiter=',',header=None, engine='python')
-        a = data[0].str.split(expand=True, n=1)
-        data['Residue ID'] = a[0]
-        data['ids'] = a[1]
-        residue_info = data[1].str.split(expand=True, n=2)
-        data['chain ID'] = residue_info[0]
-        data['Amino Acid'] = residue_info[1]
-        data['Residue_ID'] = residue_info[2]
-        data = data.drop([0, 1], axis=1)
-        data["energy"] = data[5]
-        # 提取所需列（以Residue列为x轴，Avg.列为y轴）
-        data_subset = data.iloc[131:]
-        residue_ids = data_subset['Residue_ID']
-        energy_contributions = data_subset['energy']
-        # 绘制图表
-        plt.plot(residue_ids, energy_contributions, label=subdir)
-        # 设置图表标题和标签
-        plt.title('Energy Contributions of Amino Acid Residues')
-        plt.xlabel('Peptide Residue ID')
-        plt.ylabel('Energy Contribution (Kcal/mol)')
-        # 显示图例
-        plt.legend()
-        # 显示图表
-        plt.savefig(os.path.join(root_dir, subdir+'_residue_contribution.png'))
+        if os.path.isdir(os.path.join(root_dir, subdir)):
+            file_path = os.path.join(root_dir, subdir, 'decomp-energy.dat')
+            data = pd.read_csv(file_path, skiprows=8, delimiter=',',header=None, engine='python')
+            a = data[0].str.split(expand=True, n=1)
+            data['Residue ID'] = a[0]
+            data['ids'] = a[1]
+            residue_info = data[1].str.split(expand=True, n=2)
+            data['chain ID'] = residue_info[0]
+            data['Amino Acid'] = residue_info[1]
+            data['Residue_ID'] = residue_info[2]
+            data = data.drop([0, 1], axis=1)
+            data["energy"] = data[5]
+            # 提取所需列（以Residue列为x轴，Avg.列为y轴）
+            data_subset = data.iloc[131:]
+            residue_ids = data_subset['Residue_ID']
+            energy_contributions = data_subset['energy']
+            # 绘制图表
+            plt.plot(residue_ids, energy_contributions, label=subdir)
+            # 设置图表标题和标签
+            plt.title('Energy Contributions of Amino Acid Residues')
+            plt.xlabel('Peptide Residue ID')
+            plt.ylabel('Energy Contribution (Kcal/mol)')
+            # 显示图例
+            plt.legend()
+            # 显示图表
+            plt.savefig(os.path.join(root_dir, subdir+'_residue_contribution.png'))
 
 def read_contacts(path,columns):
     nativate_contact = pd.read_csv(path, header=None)
@@ -152,16 +153,17 @@ def read_contacts(path,columns):
 
     residue_info.columns = residue_info.iloc[0]
     residue_info = residue_info[1:]
-    filtered_df = residue_info[residue_info['TotalFrac'].astype(float) > 0.1]
+    filtered_df = residue_info[residue_info['TotalFrac'].astype(float) > 10]
     contact_res= (filtered_df.iloc[:,columns].astype(int)).tolist()
     
     return set(contact_res)
 
-def contact(root_dir):
+def contact(root_dir,ref_contact_data,contact_rate):
     root_dir = Path(root_dir)
-    ref = Path('/mnt/nas1/lanwei-125/FGF5/FGF5-pos/FGFR1/contact_frac_byres.dat')
+
+    ref = Path(ref_contact_data)
     ref = set(x-225 for x in read_contacts(ref,1))
-    print(type(ref))
+
     rates = []
     for path in root_dir.iterdir():
         if path.is_dir():
@@ -173,7 +175,7 @@ def contact(root_dir):
                 rate = len(contact & ref)/len(ref)
                 a= path.stem , around(rate,3)
                 rates.append(a)
-    with open ('/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/MD/pos/contact_rate.csv', 'w') as f:
+    with open (contact_rate, 'w') as f:
         csv_writer = csv.writer(f)
         
         # 写入表头
@@ -183,15 +185,19 @@ def contact(root_dir):
         csv_writer.writerows(rates)
 
 if __name__ == '__main__':
-    root_dir = '/mnt/nas1/lanwei-125/PRLR/MD/v2/'
+
+    root_dir = '/mnt/nas1/lanwei-125/FGF5/disulfide/MD/HPEP/'
+
     RMSD_line = f'{root_dir}/RMSD_line.png'
     RMSD_box = f'{root_dir}/RMSD_box.png'
     Energy = f'{root_dir}/energy.csv'
     energy_error_plot = f'{root_dir}/energy_error_plot.png'
     contact_rate = f'{root_dir}/contact_rate.csv'
-    contact(root_dir)
+    ref_contact_data = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/FGFR1/contact_frac_byres.dat'
+
     take_energy()
     draw_RMSD_line()
     plot_RMSD_box()
     draw_energy_error_plot()
-    #residue_contribution()
+    residue_contribution()
+    contact(root_dir, ref_contact_data, contact_rate) #this maybe need ad-hoc modification

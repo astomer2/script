@@ -312,7 +312,7 @@ def run_refinement(dir_path, result_path, protein_pdb, np_nums):
     make_flag(dir_path, cluster_dir_names, protein_chain, peptide_chain, np_nums)
     result_score_file =take_candidate(cluster_dir_names, result_path)
     process_refine_pdb(result_path)
-    extract_pdb( result_score_file)
+    #extract_pdb( result_score_file)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='after clustering, run refinement, use rosetta to refine the pdb, choose the best one as the final pdb')

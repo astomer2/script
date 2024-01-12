@@ -1,5 +1,6 @@
 import os 
 from genericpath import exists
+from pathlib import Path
 import shutil
 import sys
 sys.path.append(os.path.abspath('.'))
@@ -17,14 +18,16 @@ def make_dirs(file_path):
 
 def read_pdb_chain(workdir):
     chains = {}
-    for pdb_name in [f for f in os.listdir(workdir) if f.endswith('.pdb')]:
-        input_pdb = os.path.join(workdir, pdb_name)
+    workdir = Path(workdir)
+    for pdb_name in [f for f in workdir.glob("*.pdb")]:
+        if pdb_name.stem != 'peptide' and pdb_name.stem != 'protein':
+            input_pdb = os.path.join(workdir, pdb_name)
 
-        with open(input_pdb) as f:
-            for line in f:
-                if line.startswith('ATOM'):
-                    chain_id = line[21]
-                    chains.setdefault(chain_id, []).append(line)
+            with open(input_pdb) as f:
+                for line in f:
+                    if line.startswith('ATOM'):
+                        chain_id = line[21]
+                        chains.setdefault(chain_id, []).append(line)
     return chains
 
 
@@ -48,19 +51,18 @@ def write_pdb_chain(chains, peptide, protein):
 
 def split_pdb_run(workpath):
     make_dirs(workpath)
-    for root, dirs, files_names in os.walk(workpath):
-        # 这里只关注文件夹路径
-        for subdir in dirs:
-            subdir_path = os.path.join(root, subdir)
-            chains = read_pdb_chain(subdir_path)
-            protein = os.path.join(subdir_path, 'protein.pdb')
-            peptide = os.path.join(subdir_path, 'peptide.pdb')
-            write_pdb_chain(chains, peptide, protein)
-            fixed_pdb_file(peptide)
-            fixed_pdb_file(protein)
+    for file in Path(workpath).iterdir():
+        if file.is_dir():
+            chains = read_pdb_chain(file)
+            if len(chains) != 0:
+                protein = os.path.join(file, 'protein.pdb')
+                peptide = os.path.join(file, 'peptide.pdb')
+                write_pdb_chain(chains, peptide, protein)
+                fixed_pdb_file(peptide)
+                fixed_pdb_file(protein)
 
 if __name__ == '__main__':
-    workpath = '/mnt/nas1/lanwei-125/FGF5/disulfide/MD/HPEP/'
+    workpath = '/mnt/nas1/lanwei-125/PRLR/MD/pos/'
     split_pdb_run(workpath)
 
 

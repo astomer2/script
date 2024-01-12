@@ -15,13 +15,18 @@ def collect_pdbfile(target_path, output_folder):
         folder_path = os.path.join(current_directory, folder)
         os.chdir(folder_path)  # 进入文件夹
 
-        # 检查文件夹中是否包含 folder.pdb
-        if f"{folder}.pdb" in os.listdir(folder_path):
+        # 检查文件夹中是否包含 protein.pdb 和 lig.pdb
+        if "protein.pdb" in os.listdir(folder_path) and "lig.pdb" in os.listdir(folder_path):
+            
+            # 复制 protein.pdb
+            protein_src = os.path.join(folder_path, "protein.pdb")
+            protein_dst = os.path.join(output_folder, folder + "_protein.pdb")
+            shutil.copy(protein_src, protein_dst)
 
-            # 复制 folder.pdb
-            complex_src = os.path.join(folder_path, f"{folder}.pdb")
-            complex_dst = os.path.join(output_folder, f"{folder}.pdb")
-            shutil.copy(complex_src, complex_dst)
+            # 复制 peptide.pdb
+            peptide_src = os.path.join(folder_path, "lig.pdb")
+            peptide_dst = os.path.join(output_folder, folder + "_peptide.pdb")
+            shutil.copy(peptide_src, peptide_dst)
             
             print(f"{folder} copied")
 
