@@ -5,8 +5,32 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from numpy import around
 import sys 
-sys.path.append(os.path.abspath('.'))
-from utils_peptide.residue_num import get_residue_num
+import argparse
+
+def get_residue_num(pdb_path):
+    """
+    Counts the number of unique residues in a PDB file.
+
+    Args:
+        pdb_path (str): The path to the PDB file.
+
+    Returns:
+        int: The number of unique residues in the PDB file.
+    """
+    with open(pdb_path) as f:
+        lines = f.readlines()
+
+    residue_count = 0
+    prev_res_id = 0
+    peptide_id = 0 
+    for line in lines:
+        if line.startswith('ATOM'):
+            peptide_id = line[22:26].strip()
+            if peptide_id != prev_res_id:
+                residue_count += 1
+            prev_res_id = peptide_id
+    return residue_count
+
 def draw_RMSD_line(root_dir, RMSD_line):
     
     # 设置图形大小
@@ -197,21 +221,33 @@ def contact(root_dir,ref_contact_data,contact_rate):
         # 写入数据
         csv_writer.writerows(rates)
 
-if __name__ == '__main__':
-
-    root_dir = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/MD/pos/'
+def main(root_dir,ref_contact_data):
 
     RMSD_line = f'{root_dir}/RMSD_line.png'
     RMSD_box = f'{root_dir}/RMSD_box.png'
     Energy = f'{root_dir}/energy.csv'
     energy_error_plot = f'{root_dir}/energy_error_plot.png'
     contact_rate = f'{root_dir}/contact_rate.csv'
-    ref_contact_data = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/FGFR1/contact_frac_byres.dat'
+
 
     take_energy(Energy)
     draw_RMSD_line(root_dir, RMSD_line)
     plot_RMSD_box(root_dir, RMSD_box)
     draw_energy_error_plot(Energy,energy_error_plot)
     residue_contribution(root_dir)
-    contact(root_dir, ref_contact_data, contact_rate) #this maybe need ad-hoc modification
+    if ref_contact_data != '':
+        contact(root_dir, ref_contact_data, contact_rate) #this maybe need ad-hoc modification
+
+if __name__ == '__main__':
+    parse=argparse.ArgumentParser(description='MD_analysis')
+
+    parse.add_argument('-i','--root_dir',type=str,help='root_dir')
+    parse.add_argument('-r','--ref_contact_data',default='',type=str,help='ref_contact_data,this part may need ad-hoc modification in code')
+
+    args=parse.parse_args()
+
+    root_dir = args.root_dir
+    ref_contact_data = args.ref_contact_data
+
+    main(root_dir,ref_contact_data)
     
