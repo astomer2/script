@@ -358,6 +358,8 @@ def score_cluster(HDB_cluster_dict, peptide_pdb_dir, HPEP, ADCP, peptide_number)
     """
     selected_peptides = {}
     total_peptides = sum(len(peptides) for peptides in HDB_cluster_dict.values())
+    if peptide_number > total_peptides:
+        peptide_number = total_peptides
     weights = {label: len(peptides) / total_peptides for label, peptides in HDB_cluster_dict.items()}
     peptides_to_extract = {label: math.ceil(peptide_number * weight) for label, weight in weights.items()}
 

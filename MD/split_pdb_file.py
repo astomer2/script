@@ -62,7 +62,7 @@ def split_pdb_run(workpath):
                 fixed_pdb_file(protein)
 
 if __name__ == '__main__':
-    workpath = '/mnt/nas1/lanwei-125/PRLR/MD/pos/'
+    workpath = '/mnt/nas1/lanwei-125/PRLR/MD/pos2/'
     split_pdb_run(workpath)
 
 

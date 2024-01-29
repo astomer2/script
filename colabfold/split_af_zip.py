@@ -44,8 +44,8 @@ def organize_pdb_files_by_folder(input_folder):
             shutil.copy(os.path.join(input_folder, pdb_name), os.path.join(folder_path, pdb_name))
 
 if __name__ == "__main__":
-    sturcture_zip_path = '/mnt/sdc/lanwei/TGF/CF_relax/output/'
-    top_pose_path = '/mnt/sdc/lanwei/TGF/CF_relax/extracted_files/'
+    sturcture_zip_path = '/mnt/nas1/lanwei-125/MC5R/cPEP/'
+    top_pose_path = '/mnt/nas1/lanwei-125/MC5R/cPEP/'
 
     extract_and_move_pdb_files(sturcture_zip_path, top_pose_path)
     organize_pdb_files_by_folder(top_pose_path)

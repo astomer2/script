@@ -221,7 +221,7 @@ def contact(root_dir,ref_contact_data,contact_rate):
         # 写入数据
         csv_writer.writerows(rates)
 
-def main(root_dir,ref_contact_data):
+def analysis_MD_result(root_dir,ref_contact_data) -> None:
 
     RMSD_line = f'{root_dir}/RMSD_line.png'
     RMSD_box = f'{root_dir}/RMSD_box.png'
@@ -249,5 +249,5 @@ if __name__ == '__main__':
     root_dir = args.root_dir
     ref_contact_data = args.ref_contact_data
 
-    main(root_dir,ref_contact_data)
+    analysis_MD_result(root_dir,ref_contact_data)
     

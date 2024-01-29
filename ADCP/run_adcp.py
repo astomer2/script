@@ -9,7 +9,7 @@ import multiprocessing
 from tqdm import tqdm 
 import logging
 import time
-
+import pandas as pd
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
@@ -19,30 +19,26 @@ logger.addHandler(handler)
 now_times = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
 class ADCP:
-    def __init__(self, txt_path, config_file_path, model_num, num_steps, core_num, repeat_times, work_path, cyclic, cystein):
-        print("*************程序开始执行*************")
-        print("--start time:%s--\n" % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
-        self.txt_path = txt_path
+    def __init__(self, input_file, config_file_path, output_model_num, run_step_num, core_num, repeat_times, work_path, cyclic, cystein):
+
+        self.input_file = input_file
         self.config_file_path = config_file_path
-        self.model_num = model_num
-        self.num_steps = num_steps
+        self.output_model_num = output_model_num
+        self.run_step_num = run_step_num
         self.core_num = core_num
         self.repeat_times = repeat_times
         self.work_path = work_path
         self.cyclic = cyclic
         self.cystein = cystein
-    # 生成命令
+
     def create_executive(self, key):
         if self.cyclic:
-            self.executive_txt = f"adcp -t {self.config_file_path} -s {key} -N {self.model_num} -n {self.num_steps} -c {self.core_num} -cyc -o dock > log.txt"
+            self.executive_command = f"adcp -t {self.config_file_path} -s {key} -N {self.output_model_num} -n {self.run_step_num} -c {self.core_num} -cyc -o dock > log.txt"
         elif self.cystein:
-            self.executive_txt = f"adcp -t {self.config_file_path} -s {key} -N {self.model_num} -n {self.num_steps} -c {self.core_num} -cys -o dock > log.txt"
+            self.executive_command = f"adcp -t {self.config_file_path} -s {key} -N {self.output_model_num} -n {self.run_step_num} -c {self.core_num} -cys -o dock > log.txt"
         else:
-            self.executive_txt = f"adcp -t {self.config_file_path} -s {key} -N {self.model_num} -n {self.num_steps} -c {self.core_num} -o dock > log.txt"
-        
+            self.executive_command = f"adcp -t {self.config_file_path} -s {key} -N {self.output_model_num} -n {self.run_step_num} -c {self.core_num} -o dock > log.txt"
 
-
-    # 创建文件夹
     def make_dir(self, dir_name):
         max_files = self.repeat_times + 1
         self.make_dir_name = ["%s-%d" % (dir_name, i) for i in range(1, max_files)]
@@ -53,15 +49,14 @@ class ADCP:
                 os.umask(0)
                 os.makedirs(item)
             else:
-                print("%s-->目录不为空，请检查！！！" % item)
+                logger.info("%s already exists" % item)
 
-    # 执行命令
     def executive(self, item):
         os.chdir(item)
         if os.path.exists(os.path.join(self.work_path, item, ".executed")):
             pass
         else:
-            command = self.executive_txt
+            command = self.executive_command
             subprocess.getstatusoutput(command)
             os.chdir(self.work_path)
             open(os.path.join(item, ".executed"), "w").close()
@@ -72,38 +67,45 @@ class ADCP:
             pool.map(self.executive, items)
 
     def run(self):
-        
         if not os.path.exists(self.work_path):
             os.umask(0)
             os.makedirs(self.work_path)
 
-        with open(self.txt_path, encoding='utf-8') as r_file:
-            task_count = sum(1 for _ in r_file)  # Count the number of lines in the file
+        with open(self.input_file, encoding='utf-8') as f:
+            if self.input_file.endswith(".txt"):
+                sequences = f.readlines()
+            elif self.input_file.endswith(".csv"):
+                df = pd.read_csv(self.input_file, encoding='utf-8')
+                if 'Sequence' in df.columns:
+                    sequences = df['Sequence'].tolist()
+                else:
+                    logger.error("The csv file does not contain the 'Sequence' column.")
+                    exit()
+            else:
+                logger.error("The input file must be a txt or csv file.")
+                exit()
 
-        with tqdm(total=task_count*self.repeat_times, desc="Processing", ncols=100) as pbar:
-            with open(self.txt_path, encoding='utf-8') as r_file:
+        completed_tasks = 0
 
-                for line in r_file.readlines():
-                    file_and_key_name = line.strip('\n')  # Remove the newline character
-                    self.make_dir(file_and_key_name)                                               
-                    self.create_executive(file_and_key_name)
-                    self.execute_in_parallel(self.make_dir_path)
+        for seq in sequences:
+            file_and_key_name = seq.strip('\n')  # Remove the newline character
+            self.make_dir(file_and_key_name)
+            self.create_executive(file_and_key_name)
+            self.execute_in_parallel(self.make_dir_path)
+            completed_tasks += 1
+            completion_ratio = completed_tasks / len(sequences)
+            logger.info(f"Progress: {completion_ratio:.2%}")
 
-                    for _ in self.make_dir_path:
-                        pbar.update(1)
-                    self.make_dir_name.clear()
-                    self.make_dir_path.clear()
+            self.make_dir_name.clear()
+            self.make_dir_path.clear()
 
-
-        print("\n***************程序运行完毕！！！***************")
-        print("--结束时间：%s--\n" % time.strftime('%Y-%m-%d %H:%M:%S', time.localtime()))
 
 def main():
     parser = argparse.ArgumentParser(description="Run amber simulation with specified parameters")
-    parser.add_argument("-i", "--txt_path", required=True, help="Path to the txt file")
+    parser.add_argument("-i", "--input_file", required=True, help="Path to the txt file")
     parser.add_argument("-t", "--config_file_path", required=True, help="Path to the config file")
-    parser.add_argument("-m", "--model_num", type=int, required=True, help="Model number")
-    parser.add_argument("-n", "--num_steps", type=int, required=True, help="Number of steps")
+    parser.add_argument("-m", "--output_model_num", type=int, required=True, help="Model number")
+    parser.add_argument("-n", "--run_step_num", type=int, required=True, help="Number of steps")
     parser.add_argument("-c", "--core_num", type=int, required=True, help="Number of cores")
     parser.add_argument("-r", "--repeat_times", type=int, required=True, help="Repeat times")
     parser.add_argument("-w", "--work_path", required=True, help="Path to the work directory")
@@ -119,7 +121,7 @@ def main():
 
     args = parser.parse_args()
 
-    adcp = ADCP(args.txt_path, args.config_file_path, args.model_num, args.num_steps, args.core_num, args.repeat_times, args.work_path, args.cyclic, args.cystein)
+    adcp = ADCP(args.input_file, args.config_file_path, args.output_model_num, args.run_step_num, args.core_num, args.repeat_times, args.work_path, args.cyclic, args.cystein)
     adcp.run()
 
 if __name__ == '__main__':

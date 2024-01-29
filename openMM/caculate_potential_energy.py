@@ -2,16 +2,20 @@ import os
 import shutil
 from dataclasses import dataclass
 from typing import Sequence
+from pathlib import Path
 
 import numpy as np
 from openmm import *
 from openmm.app import *
 from openmm.unit import *
 from pdbfixer import PDBFixer
-from simtk.openmm.app import PDBFile
-from simtk import unit as u
-from tqdm import tqdm
+from openmm.app import PDBFile
+from openmm import unit as u
 
+from tqdm import tqdm
+import sys
+sys.path.append(os.path.abspath("."))
+from utils_peptide.pdb_fixer import fixed_pdb_file
 
 @dataclass
 class EnergyUnit:
@@ -28,41 +32,32 @@ class Energy:
     minimized: EnergyUnit 
 
 
-def copy_and_create_directory(pdb_path):
+def copy_and_create_directory(pdb_path: str or Path) -> tuple[Path, Path]:
     """
-    Copy a PDB file to a new directory with the same name as the file (without the extension).
-
-    :param pdb_path: The path to the PDB file to be copied.
-    :type pdb_path: str
-    :return: The path to the newly created directory where the PDB file was copied.
-    :rtype: str
-    """
-
-    if pdb_path.endswith(".pdb"):
-        file_path, file_name = os.path.split(pdb_path)
-        file_name, _ = os.path.splitext(file_name)  # 使用os.path.splitext获取文件名和扩展名
-        workdir = os.path.join(file_path, file_name)
-        os.makedirs(workdir, exist_ok=True)
-        shutil.copy(pdb_path, workdir)
-
-        return workdir
-
-
-def read_pdb_chain(workdir, pdb_path):
-    """
-    Reads a PDB file and extracts the chains.
+    Copy the PDB file to a new directory and create the directory if it does not exist.
 
     Args:
-        workdir (str): The working directory where the PDB file is located.
-        pdb_path (str): The path to the PDB file.
+        pdb_path (str or Path): The path to the PDB file.
 
     Returns:
-        dict: A dictionary where the keys are chain IDs and the values are lists of ATOM records belonging to each chain.
+        tuple[Path, Path]: A tuple containing the path to the new directory and the path to the copied PDB file.
     """
+    pdb_path = Path(pdb_path)
+    if pdb_path.suffix == ".pdb":
+        workdir = pdb_path.with_suffix("") 
+        workdir.mkdir(parents=True, exist_ok=True)
+        copy_pdb = pdb_path.with_suffix("")/pdb_path.name
+        shutil.copy(pdb_path, workdir)
 
+        return workdir,copy_pdb
+
+
+def read_pdb_chain(workdir:Path or str, pdb_path:Path or str) -> dict:
+    workdir = Path(workdir)
     chains = {}
-    file_name = pdb_path.split("/")[-1]
-    input_pdb = os.path.join(workdir, file_name)
+    pdb_path = Path(pdb_path)
+    file_name = pdb_path.name
+    input_pdb = workdir/file_name
     with open(input_pdb) as f:
         for line in f:
             if line.startswith("ATOM"):
@@ -71,7 +66,7 @@ def read_pdb_chain(workdir, pdb_path):
     return chains
 
 
-def write_pdb_chain(chains, workdir, minimize = False):
+def write_pdb_chain(chains: dict, workdir: Path or str, minimize = False) -> tuple[Path, Path]:
     """
     Write PDB chain files.
 
@@ -84,12 +79,13 @@ def write_pdb_chain(chains, workdir, minimize = False):
         tuple: A tuple containing the paths to the protein and peptide files.
     """
 
-    if minimize :
-        protein = os.path.join(workdir, "minimized_protein.pdb")
-        peptide = os.path.join(workdir, "minimized_peptide.pdb")
+    workdir = Path(workdir)
+    if minimize:
+        protein = workdir / "protein_minimized.pdb"
+        peptide = workdir / "peptide_minimized.pdb"
     else:
-        protein = os.path.join(workdir, "protein.pdb")
-        peptide = os.path.join(workdir, "peptide.pdb")
+        protein = workdir / "protein.pdb"
+        peptide = workdir / "peptide.pdb"
     chain_ids = len(chains)
 
     if chain_ids >= 2:
@@ -110,50 +106,17 @@ def write_pdb_chain(chains, workdir, minimize = False):
         pass
     return protein, peptide
 
-def fixed_pdb_file(pdb_file, workdir):
+def openmm_minimize(pdb_file: Path) -> Path:
     """
-    Generate a fixed PDB file.
+    Opens a PDB file and performs an energy minimization using OpenMM.
 
-    Args:
-        pdb_file (str): The path to the PDB file.
-        workdir (str): The working directory where the fixed PDB file will be saved.
+    Parameters:
+        pdb_file (Path): The path to the PDB file.
 
     Returns:
-        a fixed PDB file with the same name as the input PDB file.
+        Path: The path to the minimized PDB file.
     """
-
-    _, complex_name = os.path.split(pdb_file)
-    complex_fixed_pdb = os.path.join(workdir, complex_name)
-
-    fixer = PDBFixer(filename= complex_fixed_pdb)
-
-    fixer.findMissingResidues()
-    fixer.findNonstandardResidues()
-
-    fixer.replaceNonstandardResidues()
-    fixer.removeHeterogens(True)
-
-    fixer.findMissingAtoms()
-    fixer.addMissingAtoms()
-    fixer.addMissingHydrogens(7.0)
-    
-    PDBFile.writeFile(fixer.topology, fixer.positions, open(complex_fixed_pdb, 'w'))
-
-    return complex_fixed_pdb
-
-def openmm_minimize(pdb_file, workdir):
-    """
-    Minimizes the energy of a protein structure using OpenMM.
-    
-    Args:
-        pdb_file (str): The path to the PDB file containing the protein structure.
-        workdir (str): The directory where the minimized PDB file will be saved.
-    
-    Returns:
-        str: The path to the minimized PDB file.
-    """
-
-    pdb = PDBFile(pdb_file)
+    pdb = PDBFile(str(pdb_file))
     forcefield = ForceField("amber14-all.xml", "implicit/gbn2.xml")
     system = forcefield.createSystem(
         pdb.topology,
@@ -171,26 +134,17 @@ def openmm_minimize(pdb_file, workdir):
 
     simulation.minimizeEnergy(maxIterations=100, tolerance=0.01)
     positions = simulation.context.getState(getPositions=True).getPositions()
-    file_name = pdb_file.split("/")[-1].split(".")[0]
-    minize_pdb = os.path.join(workdir, file_name + "_minimized.pdb")
+
+    file_name = pdb_file.parent
+    minize_pdb = file_name/(file_name.stem+"_minimized.pdb")
     PDBFile.writeFile(simulation.topology, positions, open(minize_pdb, 'w'))
 
     return minize_pdb
 
 
-def calculate_potential_energy(pdb_file):
-    """
-    Calculate the potential energy of a molecule using the provided PDB file.
+def calculate_potential_energy(pdb_file: Path) -> float:
 
-    Parameters:
-    - pdb_file (str): The path to the PDB file containing the molecular structure.
-
-    Returns:
-    - float: The potential energy of the molecule in kilocalories per mole.
-    """
-
-
-    pdb = PDBFile(pdb_file)
+    pdb = PDBFile(str(pdb_file))
     forcefield = ForceField("amber14-all.xml", 'implicit/gbn2.xml')
     system = forcefield.createSystem(
         pdb.topology,
@@ -199,9 +153,8 @@ def calculate_potential_energy(pdb_file):
         constraints=HBonds,
     )
     integrator = LangevinMiddleIntegrator(
-        310 * kelvin, 1 / u.picosecond, 0.002 * u.picoseconds
+        310 * kelvin, 1 / u.picoseconds, 0.002 * u.picoseconds
     )
-
     platform = Platform.getPlatformByName("OpenCL")
     simulation = Simulation(pdb.topology, system, integrator, platform)
     simulation.context.setPositions(pdb.positions)
@@ -210,29 +163,17 @@ def calculate_potential_energy(pdb_file):
     potentialEnergy = state.getPotentialEnergy()
     return potentialEnergy.value_in_unit(kilocalories_per_mole)
 
-
-def calculate_raw_energy(complex_pdb, workdir):
-    """
-    Calculate the raw energy of a complex using the provided PDB file and work directory.
-
-    Parameters:
-        complex_pdb (str): The path to the PDB file of the complex.
-        workdir (str): The directory where intermediate files will be stored.
-
-    Returns:
-        tuple: A tuple containing the calculated energy values for the complex, protein, peptide, and the difference in energy.
-            - complex_energy (float): The energy of the complex.
-            - protein_energy (float): The energy of the protein.
-            - peptide_energy (float): The energy of the peptide.
-            - diff_energy (float): The difference in energy between the complex, protein, and peptide.
-    """
-
+def process_tmp_pdb(workdir:Path,complex_pdb:Path, ) -> tuple[Path, Path, Path]:
     chains = read_pdb_chain(workdir,complex_pdb)
     protein, peptide = write_pdb_chain(chains, workdir)
+    fixed_complex_pdb = fixed_pdb_file(complex_pdb)
+    fixed_protein = fixed_pdb_file(protein)
+    fixed_peptide = fixed_pdb_file(peptide)
+    return fixed_complex_pdb, fixed_protein, fixed_peptide
 
-    fixed_complex_pdb = fixed_pdb_file(complex_pdb, workdir)
-    fixed_protein = fixed_pdb_file(protein, workdir)
-    fixed_peptide = fixed_pdb_file(peptide, workdir)
+def calculate_raw_energy(complex_pdb: Path, workdir: Path) -> tuple[float, float, float, float]:
+
+    fixed_complex_pdb, fixed_protein, fixed_peptide = process_tmp_pdb(workdir,complex_pdb )
 
     complex_energy = round(calculate_potential_energy(fixed_complex_pdb), 3)
     protein_energy = round(calculate_potential_energy(fixed_protein), 3)
@@ -241,30 +182,35 @@ def calculate_raw_energy(complex_pdb, workdir):
 
     return  complex_energy, protein_energy, peptide_energy, diff_energy
 
-def calc_minize_energy(complex_pdb, workdir):
+def calc_minize_energy(complex_pdb: Path, workdir: Path) -> tuple[float, float, float, float]:
     """
-    Calculate the minimized energy of a complex.
+    Calculate the minimized energy of a complex protein-peptide system.
 
-    Args:
-        complex_pdb (str): The path to the complex PDB file.
-        workdir (str): The directory to store intermediate and output files.
+    This function takes a complex protein-peptide PDB file and a working directory as input.
+    It performs energy minimization on the complex PDB file using the OpenMM library.
+    The minimized PDB file is then processed to extract the protein and peptide chains separately.
+    The protein and peptide chains are written to separate PDB files in the working directory.
+    Fixed versions of the protein and peptide PDB files are created by removing any flexible parts.
+    The potential energy of the complex, protein, and peptide structures is then calculated using the calculate_potential_energy() function.
+    The energies are rounded to 3 decimal places.
+    The difference in energy between the complex and the sum of the protein and peptide energies is also calculated.
+    The complex energy, protein energy, peptide energy, and energy difference are returned as a tuple.
+
+    Parameters:
+    - complex_pdb (Path): The path to the complex protein-peptide PDB file.
+    - workdir (Path): The path to the working directory.
 
     Returns:
-        tuple: A tuple containing the complex energy, protein energy, peptide energy, and difference energy.
-            - complex_energy (float): The potential energy of the complex.
-            - protein_energy (float): The potential energy of the protein.
-            - peptide_energy (float): The potential energy of the peptide.
-            - diff_energy (float): The difference in energy between the complex and the sum of the protein and peptide energies.
+    - tuple[float, float, float, float]: A tuple containing the complex energy, protein energy, peptide energy, and energy difference.
+
     """
-    _, complex_name = os.path.split(complex_pdb)
-    fixed_pdb = os.path.join(workdir, complex_name)
 
-    minimize_pdb = openmm_minimize(fixed_pdb, workdir)
+    minimize_pdb = openmm_minimize(complex_pdb)
     minimize_chains = read_pdb_chain(workdir, minimize_pdb)
-    minimize_protein, minimize_peptide = write_pdb_chain(minimize_chains, workdir)
+    minimize_protein, minimize_peptide = write_pdb_chain(minimize_chains, workdir, True)
 
-    fixed_protein = fixed_pdb_file(minimize_protein, workdir)
-    fixed_peptide = fixed_pdb_file(minimize_peptide, workdir)
+    fixed_protein = fixed_pdb_file(minimize_protein)
+    fixed_peptide = fixed_pdb_file(minimize_peptide)
 
     complex_energy = round(calculate_potential_energy(minimize_pdb), 3)
     protein_energy = round(calculate_potential_energy(fixed_protein), 3)
@@ -273,27 +219,16 @@ def calc_minize_energy(complex_pdb, workdir):
 
     return complex_energy, protein_energy, peptide_energy, diff_energy    
 
-def calc_complex_energy(complex_pdb):
+def calc_complex_energy(pdb_path: Path or str) -> Energy:
     """
-    Calculate the complex energy of a given PDB file.
+    Calculate the complex energy of a protein structure.
 
     Parameters:
-        complex_pdb (str): The path to the PDB file of the complex.
+        pdb_path (Path or str): The path to the PDB file of the protein structure.
 
     Returns:
-        Energy: An Energy object containing the calculated energy values.
-            - file_name (str): The name of the PDB file.
-            - raw (EnergyUnit): The raw energy values.
-                - complex_energy (float): The total energy of the complex.
-                - protein_energy (float): The energy of the protein.
-                - peptide_energy (float): The energy of the peptide.
-                - diff_energy (float): The difference in energy.
-            - minimized (EnergyUnit): The minimized energy values.
-                - complex_energy (float): The total energy of the complex.
-                - protein_energy (float): The energy of the protein.
-                - peptide_energy (float): The energy of the peptide.
-                - diff_energy (float): The difference in energy.
-
+        Energy: An object containing the calculated energy of the protein structure.
+        
     Example output:                        
         Energy(file_name='ESPLKG_top1', 
                 raw=EnergyUnit(complex_energy=-3501.436, 
@@ -306,24 +241,19 @@ def calc_complex_energy(complex_pdb):
                     diff_energy=-20.932))
     """
 
-    #complex_pdb = str(complex_pdb)
-    workdir = copy_and_create_directory(complex_pdb)
+    workdir, complex_pdb = copy_and_create_directory(pdb_path)
 
-    _, complex_name = os.path.split(complex_pdb)
-    file_name = complex_name.split(".")[0]
 
     raw_energies = calculate_raw_energy(complex_pdb, workdir)
     min_energies = calc_minize_energy(complex_pdb, workdir)
     energy = Energy(
-        file_name,
+        complex_pdb.stem,
         raw=EnergyUnit(*raw_energies),
         minimized=EnergyUnit(*min_energies),
     )
-    shutil.rmtree(workdir)
+    #shutil.rmtree(workdir)
     return energy
-    """
 
-    """
 
 def batch_calc_and_rank_by_raw_diff_energy(pdb_files: Sequence[str])-> tuple[np.ndarray, list]:
     """
@@ -348,5 +278,5 @@ def batch_calc_and_rank_by_raw_diff_energy(pdb_files: Sequence[str])-> tuple[np.
 
 
 if __name__ == "__main__":
-    complex_pdb_path = "/mnt/sdc/lanwei/TGF/top-pdb/ESPLKG_top1.pdb"
+    complex_pdb_path = "/mnt/nas1/lanwei-125/test/APLKRQ.pdb"
     print(calc_complex_energy(complex_pdb_path))

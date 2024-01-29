@@ -438,13 +438,13 @@ def analysis(work_path, reference,target):
     f.close()
     os.system("cpptraj -i cpptraj.in")
     
-    os.system("MMPBSA.py.MPI -O -i mmpbsa.in -o energy.dat -do decomp-energy.dat -sp fixed.prmtop -cp complex.prmtop -rp protein.prmtop -lp peptide.prmtop -y fixed.nc")
+    os.system("MMPBSA.py.MPI -O -i mmpbsa.in -o energy.dat -do decomp-energy.csv -eo frame_energy.csv -sp fixed.prmtop -cp complex.prmtop -rp protein.prmtop -lp peptide.prmtop -y fixed.nc")
     os.system("MMPBSA.py --clean")
 
 
 def simulation(
-        work_path, parmter_file ,cmap_path , cuda_device_id, 
-        induced_hydrogen, all_atom, CMAP, pepcyc, pepcys, GC
+        work_path: str , parmter_file: str ,cmap_path: str , cuda_device_id: int, 
+        induced_hydrogen: bool, all_atom: bool, CMAP: bool, pepcyc: bool, pepcys: bool, GC: bool
         ):
 
     os.chdir(work_path)

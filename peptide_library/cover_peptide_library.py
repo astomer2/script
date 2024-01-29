@@ -73,11 +73,11 @@ def main(fasta_file, output_file, peptide_lengths, peptide_offsets):
 
 if __name__ == "__main__":
     # Path to the FASTA file containing peptide sequences
-    fasta_file = '/mnt/nas1/lanwei-125/CD44/Structure/OPN/seq.txt'
+    fasta_file = '/mnt/nas1/lanwei-125/MC5R/Sequence/target_Sequence.txt'
     # 传入的fasta中可以是一条序列，也可以是多条，但是需要规范写法
 
-    output_file = '/mnt/nas1/lanwei-125/CD44/Sequence/OPN.txt'
+    output_file = '/mnt/nas1/lanwei-125/MC5R/Sequence/split_sequence.txt'
     # Define peptide lengths and offsets
-    peptide_lengths = [6, 7, 8, 9, 10]
-    peptide_offsets = [1, 1, 1, 1, 1]
+    peptide_lengths = [4, 5]
+    peptide_offsets = [1, 1]
     main(fasta_file, output_file, peptide_lengths, peptide_offsets)
