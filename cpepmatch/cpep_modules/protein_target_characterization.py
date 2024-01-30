@@ -23,14 +23,19 @@ from Bio.PDB import PDBParser, parse_pdb_header
 import Bio
 import vmd
 from vmd import molecule, atomsel
-
+from pathlib import Path
+import logging
 # Main function to create interfaces based on the given parameters
 def create_interfaces(working_location, protein, target, pdb_name, interface_cutoff, residues=''): 
     os.chdir('{}' .format(working_location))
     parser = PDBParser()
     try:
-        pdb_fname = ("{}.pdb" .format(pdb_name))
-        molid  = molecule.load("pdb", pdb_fname) #from vmd library
+        if Path(pdb_name).suffix =='pdb':
+            molid  = molecule.load("pdb", pdb_name.with_suffix(''))
+        else:
+            pdb_fname = ("{}.pdb" .format(pdb_name))
+            molid  = molecule.load("pdb", pdb_name)
+         #from vmd library
         
         if residues:
             Iall = interfaces_for_specific_residues(molid, residues, protein)
@@ -38,7 +43,7 @@ def create_interfaces(working_location, protein, target, pdb_name, interface_cut
             Iall = interfaces_interface_cutoff(molid, interface_cutoff, target, protein)
             
         int_fname = 'interface.pdb'
-        print('{} -> {}' .format(pdb_fname, int_fname))
+        print('{} -> {}' .format(pdb_name, int_fname))
         molecule.write(molid, 'pdb', int_fname, selection=Iall)
         molecule.delete(molid)
         
@@ -130,11 +135,13 @@ def motifs(molid, motif_size, inter_fname, consecutive):
         MP = distance_matrix_consecutive(motif_size, P_res, inter_fname)
     else:
         MP = distance_matrix(motif_size, P_res, inter_fname)
+    logging.info("Motif matrix: {}".format(len(MP)))
     return (MP)
 
 # Function to process the interface and return motifs
 def process_interface(working_location, pdb_name, motif_size, motif_type):
     os.chdir('{}'.format(working_location, pdb_name))
+    logging.info("Working directory: {}".format(os.getcwd()))
     parser = PDBParser()
     inter_fname = "interface.pdb"
     molid  = molecule.load("pdb", inter_fname)

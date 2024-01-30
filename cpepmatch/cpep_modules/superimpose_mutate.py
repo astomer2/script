@@ -31,6 +31,7 @@ from modeller.automodel import autosched
 import Bio
 import vmd
 from vmd import molecule, atomsel
+import tqdm
     
 # Functions for the superimposition and mutation processes
 
@@ -171,13 +172,12 @@ def mutate_matched_side_chains(match_path, match, real_match_count, motif_size, 
             #Disulfide-bonded cysteines
             mutation_count = mutation_count + 1
     try:
-        shutil.copyfile((match_path + ('/mutated_match.pdb')), 
-                        ('match{}_{}.pdb'.format(real_match_count, match[0])))
-        match_name = 'match{}_{}.pdb'.format(real_match_count, match[0])
+        match_name = 'match{}_{}_{}.pdb'.format(real_match_count, match[0], motif_size)
+        shutil.copyfile((match_path + ('/mutated_match.pdb')), match_name)
     except Exception:
-        shutil.copyfile((match_path + ('/cpep_aligned.pdb')), 
-                        ('match{}_{}-NotMutated.pdb'.format(real_match_count, match[0])))
-        match_name = 'match{}_{}-NotMutated.pdb'.format(real_match_count, match[0])
+        match_name = 'match{}_{}_{}-NotMutated.pdb'.format(real_match_count, match[0], motif_size)
+        shutil.copyfile((match_path + ('/cpep_aligned.pdb')),match_name)
+
 
     real_match_count = real_match_count + 1 
 
@@ -223,7 +223,8 @@ def eliminate_overlap(match, pdb_name, c1, working_location, match_path, target)
     #Eliminates the matched cyclic peptides that overlap with the receptor.    
     cyclo_rlist = int_list(match[2], quote='"')
     matched_cyclo_residues = cyclo_rlist
-    ppi_path = working_location + ("/{}.pdb".format(pdb_name))
+    #ppi_path = working_location + ("/{}.pdb".format(pdb_name))
+    ppi_path=pdb_name
     overlap = overlap_finder(match_path, ppi_path, matched_cyclo_residues, target)
 
     if overlap == [[],[]]:
@@ -333,6 +334,8 @@ def superimpose_and_mutate(working_location, all_match, motif_size, interface_cu
         match_dir = ("match{}_{}".format(cr, matched_cyclopep))
         match_directory_list.append(match_dir)
 
+        
+
         #Create a directory for each match
         try:
             os.mkdir("{}".format(match_dir))
@@ -341,10 +344,9 @@ def superimpose_and_mutate(working_location, all_match, motif_size, interface_cu
             warn(e)
             pass
 
-        cpep = ('{}{}.pdb'.format(database_location, matched_cyclopep))
-        match_folder = (working_location + ('{}/cpep_match.pdb'.format(match_dir)))
-        match_path = (working_location + ('{}'.format(match_dir)))
-
+        cpep=os.path.join(database_location, matched_cyclopep+'.pdb')
+        match_folder = os.path.join(working_location, match_dir, 'cpep_match.pdb')
+        match_path=os.path.join(working_location, match_dir)
         try:
             shutil.copy(cpep, match_folder, follow_symlinks=True)
         except RuntimeError as e:
@@ -352,8 +354,8 @@ def superimpose_and_mutate(working_location, all_match, motif_size, interface_cu
             pass
 
         #Superimpose every match  
-        cyclo_structure = pdb_parser.get_structure("reference", (working_location + ("{}/cpep_match.pdb".format(match_dir))))  
-        ppi_structure = pdb_parser.get_structure("sample", (working_location + "interface.pdb"))
+        cyclo_structure = pdb_parser.get_structure("reference", match_folder)  
+        ppi_structure = pdb_parser.get_structure("sample", os.path.join(working_location , "interface.pdb"))
 
         cyclo_model = cyclo_structure[0]
         cyclo_chain = cyclo_model['A']
@@ -372,6 +374,7 @@ def superimpose_and_mutate(working_location, all_match, motif_size, interface_cu
             real_match_list.append(match_name)
         
         shutil.rmtree(match_dir)
+    
     return(real_match_list)
 
 

@@ -1,14 +1,3 @@
-# backbone_match.py
-# Part of the cPEPmatch tool developed by Brianda L. Santini, supervised by Prof. Dr. Martin Zacharias
-# Physics Department T38, Technical University of Munich, Garching, Germany.
-#
-# Module Description:
-# This module is designed to handle the backbone matching process in the cPEPmatch tool. 
-# It focuses on matching the CA (carbon alpha) distance motifs of protein-protein interfaces (PPI) 
-# with those in the cyclic peptide database. Key functionalities include reading and interpreting 
-# motif data from the database, comparing these motifs with the PPI motifs, and calculating 
-# the fit-RMSD (Root Mean Square Deviation) to identify potential matches.
-
 import sys
 import os
 import pickle
@@ -23,22 +12,18 @@ from Bio.PDB import PDBParser, parse_pdb_header
 import Bio
 import vmd
 from vmd import molecule, atomsel
-
+import logging
 # Read and return motifs from the cyclic peptide database.
-def read_database_motifs(database_location, motif_size, motif_type):
-    cyclo_mtfs = [ ]
-    with open("{}database_{}-{}.pkl" .format(database_location, motif_size, motif_type),'rb') as database:
-        cyclo_mtfs = pickle.load(database)
-    return(cyclo_mtfs)
-    
+
 #Find matches between PPI motifs and cyclic peptide database motifs based on RMSD.
-def find_match(database_location, mtfs, motif_size, motif_type, frmsd_threshold):
+def find_match(database_name, mtfs , motif_type, frmsd_threshold):
     if motif_type:
         motif_type = 'consecutive'
     else:
         motif_type = 'not_consecutive'
-    cyclo_mtfs = read_database_motifs(database_location, motif_size, motif_type)
+    cyclo_mtfs = pickle.load(open(database_name, 'rb'))
     database_length = len(cyclo_mtfs)
+    logging.info("Number of motifs in the database: {}".format(database_length))
     
     match = dict()
     all_match = []

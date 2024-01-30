@@ -40,11 +40,12 @@ def main(args):
     print("\n\ncPEPmatch process initiated.\n")
     # 1. Create cPEP library
     print("\nStep 1: Updating the cPEP database.")
-    database = cpep_database.create_cyclolib_database(args.database_location, args.motif_size, args.consecutive, 
-                                        args.cyclization_type, args.exclude_non_standard,
+    database_path = cpep_database.create_cyclolib_database(args.database_location, args.motif_size, args.consecutive, 
+                                        args.cyclization_type, args.exclude_non_standard,args.working_location,
                                         csv_database_file='cyclo_pep.csv')
     update_progress(0.25)
     print("\nStep 1 complete.\n")
+
 
     print("\nStep 2: Characterizing the protein interface.")
     # 2. Create and Characterize Protein to Mimic
@@ -54,13 +55,16 @@ def main(args):
     update_progress(0.5)
     print("\nStep 2 complete.\n")
 
+
     print("\nStep 3: Finding matches. \nNote: This step might take longer for non-consecutive motifs.")
     # 3. Find Matches
-    all_match = backbone_match.find_match(args.database_location, protein_motifs, args.motif_size, args.consecutive, args.frmsd_threshold)
+    all_match = backbone_match.find_match(database_path , protein_motifs, args.consecutive, args.frmsd_threshold)
     all_match.sort()
+    print('\nTotal number of matches: {}' .format(len(all_match)))
     update_progress(0.75)
     print("\nStep 3 complete.\n")
     
+
     print("\nStep 4: Finalizing - mutating and refining your matches.")
     original_stdout = sys.stdout
     with open('md.log', 'w') as f:
@@ -71,6 +75,7 @@ def main(args):
         sys.stdout = original_stdout 
 
     update_progress(1.0)
+
 
     print("\nYay, all steps completed successfully! \n\n\n")
     try:
@@ -98,14 +103,15 @@ if __name__ == "__main__":
     parser.add_argument("-wl", "--working_location", default=default_test_system_location, help="Path to where your protein-target pdb file is located. Results will be outputted here")
     parser.add_argument("-dl", "--database_location", default=default_database_location, help="Path to where the cPEPmatch database is located")
    
-    parser.add_argument("-ic", "--interface_cutoff", type=int, default=6, help="Distance in angstroms to define the contact interface residues that will be matched")
-    parser.add_argument("-ft", "--frmsd_threshold", type=float, default=0.5, help="Fit-RMSD value in angstroms of how precise you want the matching")
-    parser.add_argument("-ms", "--motif_size", type=int, default=5, help="Number of CA carbons to match")
-    parser.add_argument("-cs", "--consecutive", type=lambda x: (str(x).lower() == 'true'), default=True, help="Motif type: consecutive or non-consecutive motifs")
-    parser.add_argument("-psr", "--protein_specific_residues", default='', help="Selection of given residue numbers to match, for example, if hot-spot analysis has been done prior to the matching")
+    parser.add_argument("-ic", "--interface_cutoff", type=int, default=6, help="Distance in angstroms to define the contact interface residues that will be matched, default is 6 angstroms")
+    parser.add_argument("-ft", "--frmsd_threshold", type=float, default=0.5, help="Fit-RMSD value in angstroms of how precise you want the matching, default is 0.5 angstroms")
+    parser.add_argument("-ms", "--motif_size", type=int, default=5, help="Number of CA carbons to match, default is 5")
+    parser.add_argument("-cs", "--consecutive", type=lambda x: (str(x).lower() == 'true'), default=True, help="Motif type: consecutive or non-consecutive motifs, default is consecutive")
+    parser.add_argument("-psr", "--protein_specific_residues", default='', help="Selection of given residue numbers to match, for example, if hot-spot analysis has been done prior to the matching, default is empty")
    
-    parser.add_argument("-ct", "--cyclization_type", default='', help="Select only cyclic peptides from the database that are cyclized in a specific type, e.g., 'head to tail'")
-    parser.add_argument("-ens", "--exclude_non_standard", type=lambda x: (str(x).lower() == 'true'), default=False, help="Exclude cyclic peptides from the database containing non-standard amino acids.")
+    parser.add_argument("-ct", "--cyclization_type", default='', 
+                        help="Select only cyclic peptides from the database that are cyclized in a specific type,default is empty, you can chose from 1:' head to tail', 2: 'side-chain to backbone', 3: 'side chain to side chain', 4: '1x disulfide bridge', 5: '2x disulfide bridges', 6:'3x disulfide bridges, head to tail' .ect. for details, in /cpepmatch/database/cyclo_pep.csv ")
+    parser.add_argument("-ens", "--exclude_non_standard", type=lambda x: (str(x).lower() == 'true'), default=False, help="Exclude cyclic peptides from the database containing non-standard amino acids, default is False")
 
     args = parser.parse_args()
     main(args)

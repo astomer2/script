@@ -1,15 +1,3 @@
-# cpep_database.py
-# Part of the cPEPmatch tool developed by Brianda L. Santini, supervised by Prof. Dr. Martin Zacharias
-# Physics Department T38, Technical University of Munich, Garching, Germany.
-# 
-# Module Description:
-# This module is dedicated to the creation and characterization of the cyclic peptide (cPEP) database.
-# It includes functions for reading and processing cyclic peptide data, calculating distance matrices,
-# and characterizing peptide motifs. The module plays a critical role in the cPEPmatch tool by 
-# providing the foundational data needed for matching and analysis of cyclic peptides in the context
-# of protein mimicry and target binding.
-
-
 import sys
 import os
 import operator
@@ -24,6 +12,7 @@ from Bio.PDB import PDBParser, parse_pdb_header
 import Bio
 import vmd
 from vmd import molecule, atomsel
+from pathlib import Path
 
 # Function to calculate distance matrix for cyclic peptides
 def cyclo_distance_matrix(nres, R, fname):
@@ -99,8 +88,8 @@ def cyclo_motifs(molid, cyclo, motif_size, consecutive):
 
 # Function to create a library database of cyclic peptides
 def create_cyclolib_database(database_location, motif_size, consecutive,  
-                             cyclization_type, exclude_non_standard,
-                             csv_database_file='cyclo_pep.csv'):
+                             cyclization_type, exclude_non_standard,working_location,
+                             csv_database_file='cyclo_pep.csv',):
     
     os.chdir(database_location)
     parser = PDBParser()
@@ -144,9 +133,9 @@ def create_cyclolib_database(database_location, motif_size, consecutive,
             motifs.update({standard_peptide: c_mtfs})
             cyclo_mtfs.append(motifs)
             
-    
-    database = open("database_{}-{}.pkl" .format(motif_size, motif_type), "wb")
+    working_location=Path(working_location)
+    database = open("{}/database_{}_{}-{}.pkl" .format(working_location,working_location.stem,motif_size, motif_type), "wb")
     pickle.dump(cyclo_mtfs, database)
     database.close()
-    database_name = "database_{}-{}.pkl" .format(motif_size, motif_type)
+    database_name = "{}/database_{}_{}-{}.pkl" .format(working_location,working_location.stem,motif_size, motif_type)
     return(database_name)

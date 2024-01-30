@@ -13,6 +13,7 @@ def download_HPEP_result(download_directory, url_log):
 
     driver = ChromiumOptions().set_paths(browser_path="/snap/bin/chromium")
     driver.set_argument("--headless")
+    driver.set_proxy('http://192.168.1.20:7890')
     page = ChromiumPage(addr_driver_opts=driver)
     page.download_set.by_DownloadKit()
     page.download_set.save_path(download_directory)
@@ -37,14 +38,20 @@ def download_HPEP_result(download_directory, url_log):
     page.close_tabs()
     page.quit()
 
-if __name__ == "__main__":
-    # 用argparse解析命令行
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-o","--download_directory", type=str, help="download directory")
-    parser.add_argument("-i","--url_log", type=str, help="url_log path")
-    args = parser.parse_args()
-    download_directory = args.download_directory
-    url_log = args.url_log
 
+if __name__ == "__main__":
+    download_directory="/mnt/nas1/lanwei-125/MC5R/dock/HPEP/"
+    url_log="/mnt/nas1/lanwei-125/MC5R/dock/HPEP/log.txt"
     download_HPEP_result(download_directory, url_log) 
+
+# if __name__ == "__main__":
+#     # 用argparse解析命令行
+#     import argparse
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument("-o","--download_directory", type=str, help="download directory")
+#     parser.add_argument("-i","--url_log", type=str, help="url_log path")
+#     args = parser.parse_args()
+#     download_directory = args.download_directory
+#     url_log = args.url_log
+
+#     download_HPEP_result(download_directory, url_log) 
