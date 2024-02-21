@@ -58,6 +58,7 @@ class ADCP:
         else:
             command = self.executive_command
             subprocess.getstatusoutput(command)
+            #logger.info(command)
             os.chdir(self.work_path)
             open(os.path.join(item, ".executed"), "w").close()
 
@@ -101,7 +102,7 @@ class ADCP:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run amber simulation with specified parameters")
+    parser = argparse.ArgumentParser(description="Run ADCP dock with specified parameters")
     parser.add_argument("-i", "--input_file", required=True, help="Path to the txt file")
     parser.add_argument("-t", "--config_file_path", required=True, help="Path to the config file")
     parser.add_argument("-m", "--output_model_num", type=int, required=True, help="Model number")

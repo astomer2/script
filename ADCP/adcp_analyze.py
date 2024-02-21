@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from pathlib import Path
 import os
 import numpy as np
+import pandas as pd
 
 @dataclass
 class DockingResult:
@@ -45,22 +46,30 @@ def write_result(result_path: Path, docking_results: list):
             name_score_dict[name] = []
         name_score_dict[name].append(docking_result.score)
 
-    result_file_path = result_path / "result.txt"
+    result_df = pd.DataFrame(columns=["sequence", "mix", "max", "avg", "med", "var", "machine_score"])
+    result_data = []
+    for name, scores in name_score_dict.items():
+        min_score = np.min(scores)
+        max_score = np.max(scores)
+        med_score = np.median(scores)
+        avg_score = np.mean(scores)
+        var_score = np.var(scores)
+        machine_score = avg_score + 2.5*(float(var_score)/float(len(scores)))**0.5
 
-    with result_file_path.open("w") as result_file:
-        result_file.write("sequence\tmix\tmax\tavg\tmed\tvar\tmachine_score\n")
+        result_data.append({
+            "Sequence": name.upper(),
+            "mix": np.around(min_score,3),
+            "max": np.around(max_score,3),
+            "avg": np.around(avg_score,3),
+            "med": np.around(med_score,3),
+            "var": np.around(var_score,3),
+            "machine_score": np.around(machine_score,3)
+        })
+        result_df = pd.DataFrame(result_data)
 
-        for name, scores in name_score_dict.items():
-            min_score = np.min(scores)
-            max_score = np.max(scores)
-            med_score = np.median(scores)
-            avg_score = np.mean(scores)
-            var_score = np.var(scores)
-            machine_score = avg_score + 2.5*(float(var_score)/float(len(scores)))**0.5
-
-            result_file.write(f"{name.upper()}\t{min_score}\t{max_score}\t{avg_score:.2f}\t{med_score:.2f}\t{var_score:.2f}\t{machine_score:.2f}\n")
+    result_df.to_csv(result_path / "result.csv", index=False)
 
 if __name__ == '__main__':
-    path = Path('/mnt/nas1/lanwei-125/TGFbR2/dock/v2/')    
+    path = Path('/mnt/nas1/lanwei-125/MC5R/dock/ADCP/CPEP_motif_4/AGRP/')    
     docking_results = read_score(path)
     write_result(path, docking_results)

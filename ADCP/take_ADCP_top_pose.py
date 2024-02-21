@@ -136,10 +136,10 @@ def merge_best_pdb():
             f_out.write('ENDMDL\n\n')    
 
 if __name__ == '__main__':
-    path =  '/mnt/nas1/lanwei-125/FGF5/FGF5_disulfied_sequence_dock/'
+    path =  '/mnt/nas1/lanwei-125/MC5R/MD/pos/ZMK2-110/zmk2-adcp'
     new_chain_id = 'E'
-    out_dir = '/mnt/nas1/lanwei-125/FGF5/disf_ADCP_best_pose_pdb/'
-    output_file = f'{out_dir}/MC1R-dock-pose.pdb'
+    out_dir = '/mnt/nas1/lanwei-125/MC5R/MD/pos/ZMK2-110/'
+    output_file = f'{out_dir}/MC5R-dock-pose.pdb'
     #md_file = '/mnt/nas1/lanwei-125/IL8/v2/'
     min_scores = confirm_best_pose_pdb()
     take_best_pose_pdb(min_scores)

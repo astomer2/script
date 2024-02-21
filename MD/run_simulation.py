@@ -276,7 +276,7 @@ def sovlate_pdb(
             sequences, sequence_lengths = extract_three_letter_code(peptide_structure)
             formatted_sequence = "{" + " ".join(sequences) + "}"
             f.write("peptide= loadpdbusingseq  " + peptide_structure + " "+formatted_sequence +"\n")
-            f.write("remove peptide peptide."+ str(sequence_lengths) +".OXT \n")
+            #f.write("remove peptide peptide."+ str(sequence_lengths) +".OXT \n")
             f.write("bond peptide.1.N peptide."+ str(sequence_lengths) +".C \n")
 
         elif  pepcys : 

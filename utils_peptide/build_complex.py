@@ -17,7 +17,7 @@ def read_receptor(protein_path, old_chain_id,new_chain_id):
                 occupancy = line[54:60]
                 if occupancy != '0.00':
                     line = line[:56] + '1.00' + line[60:]
-            receptor.append(line)
+                receptor.append(line)
     return receptor
 
 def read_ligand(peptide_dir_path, complex_output_path):
@@ -43,11 +43,11 @@ def read_ligand(peptide_dir_path, complex_output_path):
 
 if __name__ == '__main__':
 
-    protein_path = '/mnt/nas1/lanwei-125/TGFbR2/TBR2.pdb'
-    peptide_dir_path = '/mnt/nas1/lanwei/TGFBR2/final_best_pose_pdb/'
-    complex_output_path = '/mnt/nas1/lanwei-125/TGFbR2/dock/ADCP/complex'
+    protein_path = '/mnt/nas1/lanwei-125/MC5R/dock/structure/MC5R.pdb'
+    peptide_dir_path = '/mnt/nas1/lanwei-125/MC5R/dock/pos/'
+    complex_output_path = '/mnt/nas1/lanwei-125/MC5R/dock/pos/'
     old_chain_id = "A"
-    new_chain_id = "B"
+    new_chain_id = "A"
 
     new_pdb = read_receptor(protein_path, old_chain_id, new_chain_id)
     read_ligand(peptide_dir_path,complex_output_path)

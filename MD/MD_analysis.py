@@ -1,5 +1,6 @@
 import os
 import csv
+from tkinter import NO
 import pandas as pd
 import matplotlib.pyplot as plt 
 from pathlib import Path
@@ -183,7 +184,7 @@ def residue_contribution(root_dir):
                 plt.ylabel('Energy Contribution (Kcal/mol)')
                 plt.legend()
                 plt.tight_layout() 
-                plt.savefig(subdir / '_residue_contribution.png')
+                plt.savefig(subdir / 'residue_contribution.png')
                 plt.close()
 
 def read_contacts(path,columns):
@@ -239,15 +240,22 @@ def analysis_MD_result(root_dir,ref_contact_data) -> None:
         contact(root_dir, ref_contact_data, contact_rate) #this maybe need ad-hoc modification
 
 if __name__ == '__main__':
-    parse=argparse.ArgumentParser(description='MD_analysis')
-
-    parse.add_argument('-i','--root_dir',type=str,help='root_dir')
-    parse.add_argument('-r','--ref_contact_data',default='',type=str,help='ref_contact_data,this part may need ad-hoc modification in code')
-
-    args=parse.parse_args()
-
-    root_dir = args.root_dir
-    ref_contact_data = args.ref_contact_data
-
+    root_dir ='/mnt/nas1/lanwei-125/MC5R/MD/pos/'
+    ref_contact_data =''
     analysis_MD_result(root_dir,ref_contact_data)
+    
+
+
+# if __name__ == '__main__':
+#     parse=argparse.ArgumentParser(description='MD_analysis')
+
+#     parse.add_argument('-i','--root_dir',type=str,help='root_dir')
+#     parse.add_argument('-r','--ref_contact_data',default='',type=str,help='ref_contact_data,this part may need ad-hoc modification in code')
+
+#     args=parse.parse_args()
+
+#     root_dir = args.root_dir
+#     ref_contact_data = args.ref_contact_data
+
+#     analysis_MD_result(root_dir,ref_contact_data)
     

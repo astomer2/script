@@ -269,8 +269,8 @@ def calculate_descriptors(input_file, output_file, columns_index, sheet_name):
 
 # 指定输入和输出文件的路径
 if __name__ == "__main__":
-    input_file = '/mnt/nas1/lanwei-125/TGFbR2/dock/v2/seq.txt'
-    output_file ='/mnt/nas1/lanwei-125/TGFbR2/dock/v2/seq.csv'
+    input_file = '/mnt/nas1/lanwei-125/MC5R/dock/HPEP/HPEP_AF/seq.txt'
+    output_file ='/mnt/nas1/lanwei-125/MC5R/dock/HPEP/seq_prop.csv'
     columns_index = 0
     sheet_name = 'phsical_properties'
     # 计算描述符并保存结果到CSV文件

@@ -1,6 +1,8 @@
+import re
 from re import S
 import time
 from tqdm import tqdm
+import pandas as pd
 import argparse
 from DrissionPage import ChromiumOptions
 from DrissionPage import ChromiumPage
@@ -8,11 +10,27 @@ from DrissionPage.common import By
 from logging import Logger
 from pathlib import Path
 
-def read_sequences(file_path):
-    with open(file_path, 'r') as f:
-        seqs = [line.strip() for line in f]
+def read_sequences(file_path, cys):
+    sequences = []
 
-    seq_groups = [seqs[i:i+10] for i in range(0, len(seqs), 10)]
+    # 读取文件内容
+    if file_path.endswith('.txt'):
+        with open(file_path, 'r') as f:
+            lines = f.readlines()
+    elif file_path.endswith('.csv'):
+        df = pd.read_csv(file_path)
+        lines = df['Sequence']
+
+    # 处理每一行序列
+    for line in lines:
+        seqs = line.strip()
+        if cys:
+            cys_pos = [substr.start() for substr in re.finditer('C', seqs)]
+            if len(cys_pos) == 2:
+                seqs = f"{seqs} -ss {cys_pos[0]+1} {cys_pos[1]+1}"
+        sequences.append(seqs)
+
+    seq_groups = [sequences[i:i+10] for i in range(0, len(sequences), 10)]
     return seq_groups
 
 def submit_sequence(page, seq_list):
@@ -55,12 +73,12 @@ def save_result(page, log_file):
     with open(log_file, 'a') as f:
         f.write(url + ' ' + current_time + '\n')
 
-def HPEP(seq_file, Receptor_file, log_file, reference_file):
-    seq_groups = read_sequences(seq_file)
+def HPEP(seq_file,cys, Receptor_file, log_file, reference_file):
+    seq_groups = read_sequences(seq_file, cys)
     url = 'http://huanglab.phys.hust.edu.cn/hpepdock/'
     driver = ChromiumOptions().set_paths(browser_path='/snap/bin/chromium')
     driver.set_argument('--headless')
-    driver.set_proxy('http://192.168.1.20:7890')
+    driver.set_proxy('http://192.168.1.11:7890')
     page = ChromiumPage(addr_driver_opts=driver)
     for i, seq_list in enumerate(tqdm(seq_groups)):
         page.get(url)
@@ -91,9 +109,9 @@ def main():
 '''
 
 if __name__ == '__main__':
-    
-    seq_file = "/mnt/nas1/lanwei-125/PRLR/GA-generator/HPEP/test.txt"
-    Receptor_file = "/mnt/nas1/lanwei-125/PRLR/structure_prepare/PRLR.pdb"
-    log_file =  "/mnt/nas1/lanwei-125/PRLR/GA-generator/HPEP/log.txt"
+    cys = True
+    seq_file = "/mnt/nas1/lanwei-125/MC5R/dock/HPEP/cpep_sequence/Sequence.csv"
+    Receptor_file = "/mnt/nas1/lanwei-125/MC5R/Sequence/MC5R.pdb"
+    log_file =  "/mnt/nas1/lanwei-125/MC5R/dock/HPEP/cpep_sequence/log.txt"
     reference_file = ""
-    HPEP(seq_file, Receptor_file, log_file, reference_file)
+    HPEP(seq_file,cys, Receptor_file, log_file, reference_file)
