@@ -1,5 +1,0 @@
-Warning: importing 'simtk.openmm' is deprecated.  Import 'openmm' instead.
-usage: rosetta_refinement.py [-h] [-i DIR_PATH] [-o RESULT_PATH]
-                             [-rec PROTEIN_PDB] [-rec_id PROTEIN_CHAIN]
-                             [-lig_id PEPTIDE_CHAIN] [-n NP_NUMS]
-rosetta_refinement.py: error: argument -i/--dir_path: expected one argument
