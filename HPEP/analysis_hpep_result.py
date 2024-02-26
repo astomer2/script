@@ -45,7 +45,7 @@ def analyze_scores():
 
 if __name__ == "__main__":
 
-    input_file = "/mnt/nas1/lanwei-125/test/"
+    input_file = "/mnt/nas1/lanwei-125/MC5R/dock/HPEP/cpep_sequence/"
 
     analyze_scores()
     print("输出成功")

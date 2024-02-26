@@ -118,6 +118,19 @@ def take_best_pose_pdb(min_scores):
                     f.writelines(content)
 
 def merge_best_pdb():
+    """
+    This function merges all the best poses from the PDB files into a single PDB file.
+
+    Parameters:
+    -----------
+    out_dir (str): The directory where the PDB files are stored.
+    output_file (str): The name of the output file.
+
+    Returns:
+    --------
+    None
+
+    """
     pdb_files = [f for f in os.listdir(out_dir) if f.endswith('.pdb')] 
     pdb_files.sort()
 
@@ -136,11 +149,11 @@ def merge_best_pdb():
             f_out.write('ENDMDL\n\n')    
 
 if __name__ == '__main__':
-    path =  '/mnt/nas1/lanwei-125/MC5R/MD/pos/ZMK2-110/zmk2-adcp'
+    path =  '/mnt/nas1/lanwei-125/MC5R/dock/ADCP/CPEP_motif_4/ASIP'
     new_chain_id = 'E'
-    out_dir = '/mnt/nas1/lanwei-125/MC5R/MD/pos/ZMK2-110/'
+    out_dir = '/mnt/nas1/lanwei-125/MC5R/dock/ADCP/CPEP_motif_4/best_pose/'
     output_file = f'{out_dir}/MC5R-dock-pose.pdb'
     #md_file = '/mnt/nas1/lanwei-125/IL8/v2/'
     min_scores = confirm_best_pose_pdb()
     take_best_pose_pdb(min_scores)
-    #merge_best_pdb()
+    #merge_best_pdb()MRAP

@@ -37,7 +37,7 @@ def monitor_gpu_usage():
         List[Tuple[int, float]]: A list of tuples, where each tuple contains the GPU ID (int) and its utilization percentage (float).
     """
     nvsmi = nvidia_smi.getInstance()
-    gpu_ids = list(range(nvsmi.DeviceQuery('count')['count']))
+    gpu_ids = [item['uuid'] for item in nvsmi.DeviceQuery('uuid')['gpu']]
     gpu_utils = [gpu['utilization']['gpu_util'] for gpu in nvsmi.DeviceQuery('utilization.gpu')['gpu']]
     gpu_usage = list(zip(gpu_ids, gpu_utils))
     return gpu_usage
@@ -123,33 +123,46 @@ def run_muti_MD(subject: str, script_path: str,extra_functions: list):
     
     After each iteration of the while loop, it calculates the progress as the ratio of `ran_task` to the total number of tasks and writes the progress to the console using the tqdm library.
     """
-    gpu_ids = collections.deque(determine_available_gpu()) 
+    gpu_ids = collections.deque(determine_available_gpu())
     logging.info(gpu_ids)
     ran_task = []
     tasks_list = get_tasks(subject)
-    
+
+    # 创建一个字典，用于存储已完成的任务
+    finished_tasks = {}
+
     while len(ran_task) < len(tasks_list):
         # 使用 tqdm 创建进度条，总任务数为 len(tasks)
         tasks = [task for task in tasks_list if task not in ran_task]
         tasks_queue = collections.deque(tasks)
+
+        # 检查是否有可用的 GPU
         if not gpu_ids:
+            # 如果没有可用的 GPU，则等待 45 秒
             logging.info(f"{now_time} 没有可用的 GPU，等待 45 秒后重试...")
+            time.sleep(45)
             gpu_ids = collections.deque(determine_available_gpu())
 
+        # 如果有可用的 GPU，则分配一个 GPU 并运行任务
         if gpu_ids:
             gpu_id = gpu_ids.popleft()
             work_path = tasks_queue.popleft()
-            if os.path.exists(os.path.join(work_path, "mdinfo")):
+
+            # 检查任务是否已完成
+            if work_path in finished_tasks:
                 ran_task.append(work_path)
                 logging.info(f"{now_time} {work_path} 已经运行，跳过")
                 continue
-            else:            
-                run_command(script_path, work_path, extra_functions, gpu_id)
-                ran_task.append(work_path)
-            
+
+            # 运行任务
+            run_command(script_path, work_path, extra_functions, gpu_id)
+            ran_task.append(work_path)
+            finished_tasks[work_path] = True
+
         # 使用 tqdm 创建进度条，总任务数为 len(tasks)，len(ran_task) 为已经运行的任务数，使用这两个值作为tqdm进度
         progress = len(ran_task) / len(tasks_list)
         tqdm.write(f"{now_time} 进度：{progress:.2%}")
+
 
 if __name__ == "__main__":
     default_script_path = '/mnt/nas1/lanwei-125/script/MD/run_simulation.py'

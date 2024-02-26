@@ -43,9 +43,9 @@ def read_ligand(peptide_dir_path, complex_output_path):
 
 if __name__ == '__main__':
 
-    protein_path = '/mnt/nas1/lanwei-125/MC5R/dock/structure/MC5R.pdb'
-    peptide_dir_path = '/mnt/nas1/lanwei-125/MC5R/dock/pos/'
-    complex_output_path = '/mnt/nas1/lanwei-125/MC5R/dock/pos/'
+    protein_path = '/mnt/nas1/lanwei-125/MC5R/Sequence/MC5R.pdb'
+    peptide_dir_path = '/mnt/nas1/lanwei-125/MC5R/dock/ADCP/CPEP_motif_4/best_pose/'
+    complex_output_path = '/mnt/nas1/lanwei-125/MC5R/dock/ADCP/CPEP_motif_4/complex/'
     old_chain_id = "A"
     new_chain_id = "A"
 

@@ -97,7 +97,7 @@ def analyze_scores(folder_path):
                 })
 
 if __name__ == "__main__":
-    folder_path = '/mnt/nas1/lanwei-125/test/'
-    output_folder = '/mnt/nas1/lanwei-125/test/'
+    folder_path = '/mnt/nas1/lanwei-125/MC5R/dock/HPEP/cpep_sequence/'
+    output_folder = '/mnt/nas1/lanwei-125/MC5R/dock/HPEP/cpep_sequence/'
     multiple_extraction(folder_path, output_folder)
     analyze_scores(folder_path)

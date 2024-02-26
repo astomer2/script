@@ -338,7 +338,7 @@ if __name__ == "__main__":
     # 定义命令行参数
     parser = argparse.ArgumentParser(description="Run amber simulation with specified parameters, if no parameters are specified, default parameters will be used")
     parser.add_argument("-i", "--work_path", required=True, help="Path to the work directory, should have protein.pdb and peptide.pdb, must be required")
-    parser.add_argument("-g", "--cuda_device_id", nargs='?',type=int, default=default_cuda_device_id, help="CUDA device ID,  default is 0")
+    parser.add_argument("-g", "--cuda_device_id", nargs='?', default=default_cuda_device_id, help="CUDA device ID,  default is 0")
     parser.add_argument("-p", "--parmter_file", nargs='?', type=str, default=default_parmter_file, help="Path to the amber simulation parmter files, default is /mnt/nas1/software/MD/amber_paramter_files,  must be required")
     parser.add_argument("-c", "--CMAP_path", nargs='?',type=str, default=default_cmap_path, help="Path to the CMAP master path, default is /mnt/nas1/software/MD/CMAP_files")
     parser.add_argument("-hyd", "--induced_hydrogen", action="store_true",default=True, help="Use pdb4amber to reduce oridnally hydrogen, then add amber format hydrogens, default is True")
