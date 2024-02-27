@@ -86,8 +86,8 @@ def process_directory(input_folder, result_dir):
                 extract_best_model(pdb_file_path, cluster, number, root)
 
 if __name__ == "__main__":
-    input_folder = "/mnt/nas1/lanwei-125/test/"
-    result_dir = "/mnt/nas1/lanwei-125/test/"
+    input_folder = "/mnt/nas1/lanwei-125/MC5R/dock/HPEP/cpep_sequence/"
+    result_dir = "/mnt/nas1/lanwei-125/MC5R/dock/HPEP/cpep_sequence_best_pose"
 
     process_directory(input_folder, result_dir)
     print("PDB文件提取完成")

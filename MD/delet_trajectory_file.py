@@ -38,6 +38,6 @@ def check_trajectory_file(dir_path: str)->tuple:
     return MD, MD_path
 
 if __name__ == '__main__':
-    dir_path = '/mnt/nas1/lanwei-125/PRLR/MD/'
+    dir_path = '/mnt/nas1/lanwei-125/MC5R/MD/pos/'
     find_trajectory_flie(dir_path)
     MD , MD_path = check_trajectory_file(dir_path)

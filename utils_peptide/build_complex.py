@@ -1,5 +1,7 @@
 import os 
 
+
+#this script is used to build complex from peptide pose ,please make sure the protein will conbine with the peptide
 def read_receptor(protein_path, old_chain_id,new_chain_id):
     receptor = []
     with open(protein_path) as f:
@@ -43,9 +45,9 @@ def read_ligand(peptide_dir_path, complex_output_path):
 
 if __name__ == '__main__':
 
-    protein_path = '/mnt/nas1/lanwei-125/MC5R/Sequence/MC5R.pdb'
-    peptide_dir_path = '/mnt/nas1/lanwei-125/MC5R/dock/ADCP/CPEP_motif_4/best_pose/'
-    complex_output_path = '/mnt/nas1/lanwei-125/MC5R/dock/ADCP/CPEP_motif_4/complex/'
+    protein_path = '/mnt/nas1/lanwei-125/MC5R/dock/structure/MC5R.pdb'
+    peptide_dir_path = '/mnt/nas1/lanwei-125/MC5R/dock/HPEP_best_pose/'
+    complex_output_path = '/mnt/nas1/lanwei-125/MC5R/dock/hpep-complex'
     old_chain_id = "A"
     new_chain_id = "A"
 

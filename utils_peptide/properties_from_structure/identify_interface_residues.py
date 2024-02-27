@@ -7,8 +7,9 @@ import csv
 
 from prody.measure.contacts import findNeighbors
 from prody import parsePDB
-from utils_peptide.common_utils import read_pdb_chain
-from utils_peptide.common_utils import write_pdb_chain
+from utils_comm.log_util import logger
+from utils_peptide.pdb_utils import read_pdb_chain
+from utils_peptide.pdb_utils import write_pdb_chain
 from dataclasses import dataclass
 
 
@@ -18,13 +19,11 @@ class InteractionResult:
     A data class that stores the interaction result of a protein-peptide complex.
 
     Attributes:
-        protein (str): The name of the protein file.
-        peptide (str): The name of the peptide file.
+        pdb_file (str): The base name of the PDB file.
         interacting_chainA_res (list): A list of interacting residues on chain A.
     """
 
-    protein: str
-    peptide: str
+    pdb_file: str
     interacting_chainA_res: list
 
 
@@ -37,22 +36,34 @@ def identify_interface_residues(workdir, needs_b=0):
         needs_b (int, optional): If set to 1, the function will also find the interacting residues on chain B. Defaults to 0.
 
     Returns:
-        dict: A dictionary where the key is a tuple of (protein, peptide), and the value is an instance of InteractionResult.
+        dict: A dictionary where the key is the name of the PDB file, and the value is an instance of InteractionResult.
     """
 
     result_dict = {}
     os.chdir(workdir)
 
-    # Create a subdirectory named 'output'
-    output_dir = os.path.join(workdir, "output")
+    # Create a subdirectory named 'complex_split_out_pdb'
+    output_dir = os.path.join(workdir, "complex_split_out_pdb")
     os.makedirs(output_dir, exist_ok=True)
+    # Count the total number of all pdb files under the directory folder
+    total_pdb_files = [f for f in os.listdir(workdir) if f.endswith(".pdb")]
+    total_pdb_count = len(total_pdb_files)
+    logger.info(f"Total number of PDB files: {total_pdb_count}")
 
     chains = read_pdb_chain(workdir)
     # Pass the output directory to write_pdb_chain
     pdb_filenames = write_pdb_chain(chains, output_dir)
-
+    processed_pdb_count = 0
     # Assuming the list has even number of elements
     for protein, peptide in zip(pdb_filenames[::2], pdb_filenames[1::2]):
+        processed_pdb_count += 1
+        pdb_name = os.path.basename(protein).split("_")[
+            0
+        ]  # Extract the pdb_name from the protein file name
+        pdb_file = f"{pdb_name}.pdb"
+        logger.info(
+            f"Processing PDB file: {pdb_file} ({processed_pdb_count}/{total_pdb_count})"
+        )
         rec = parsePDB(protein)
         pep = parsePDB(peptide)
 
@@ -71,9 +82,7 @@ def identify_interface_residues(workdir, needs_b=0):
         interacting_chainA_res.sort()
 
         # Store the result in the dictionary
-        result_dict[(protein, peptide)] = InteractionResult(
-            protein, peptide, interacting_chainA_res
-        )
+        result_dict[(pdb_file)] = InteractionResult(pdb_file, interacting_chainA_res)
 
     return result_dict
 
@@ -88,7 +97,7 @@ def write_results_to_csv(results, filename):
     """
 
     with open(filename, "w", newline="") as csvfile:
-        fieldnames = ["protein", "peptide", "interacting_chainA_res"]
+        fieldnames = ["pdb_file", "interacting_chainA_res"]
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
         writer.writeheader()
@@ -97,6 +106,7 @@ def write_results_to_csv(results, filename):
 
 
 if __name__ == "__main__":
+    logger.info("start identifying the interface residues")
     workdir = (
         "/mnt/nas/yuliu/repos/peptide-deploy/utils_peptide/cyc_pep_protein_complex"
     )
@@ -105,3 +115,4 @@ if __name__ == "__main__":
         results,
         "/mnt/nas/yuliu/repos/peptide-deploy/test_outputs/identify_interface_results.csv",
     )
+    logger.info("end")

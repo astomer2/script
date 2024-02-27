@@ -1,16 +1,12 @@
-
 import os
-import sys
 from Bio.PDB import PDBParser
 from Bio.PDB.SASA import ShrakeRupley
 from dataclasses import dataclass
 from typing import List
-#from utils_comm.log_util import logger
+from utils_comm.log_util import logger
+from utils_peptide.pdb_utils import read_pdb_chain
+from utils_peptide.pdb_utils import write_pdb_chain
 import csv
-
-#sys.path.append(os.path.abspath("./script-1/utils_comm"))
-from common_utils import read_pdb_chain
-from common_utils import write_pdb_chain
 
 @dataclass
 class SASAResult:
@@ -91,25 +87,32 @@ def calc_relative_SASA(workdir) -> List[SASAResult]:
     """
     os.chdir(workdir)
 
+    # Create a subdirectory named 'complex_split_out_pdb'
     output_dir = os.path.join(workdir, "complex_split_out_pdb")
     os.makedirs(output_dir, exist_ok=True)
     total_pdb_files = [f for f in os.listdir(workdir) if f.endswith(".pdb")]
     total_pdb_count = len(total_pdb_files)
-
+    logger.info(f"Total number of PDB files: {total_pdb_count}")
     chains = read_pdb_chain(workdir)
 
+    # Pass the output directory to write_pdb_chain
     write_pdb_chain(chains, output_dir)
     processed_pdb_names = set()
     results = []
     processed_pdb_count = 0
     for (pdb_name, chain_id), _ in chains.items():
-
+        # Skip if pdb_name has already been processed to avoid processing the same file for two different chains.
         if pdb_name in processed_pdb_names:
             continue
         processed_pdb_count += 1
-
+        logger.info(f"Processing PDB file: {pdb_name} ({processed_pdb_count}/{total_pdb_count})")
+        # Create the full file path for the protein PDB file in the output directory
         protein_filename = os.path.join(output_dir, f"{pdb_name}_A.pdb")
+
+        # Create the full file path for the peptide PDB file in the output directory
         peptide_filename = os.path.join(output_dir, f"{pdb_name}_B.pdb")
+
+        # Create the full file path for the complex PDB file in the working directory
         complex_filename = os.path.join(workdir, f"{pdb_name}.pdb")
 
         protein_sasa = calc_SASA(protein_filename)
@@ -117,7 +120,7 @@ def calc_relative_SASA(workdir) -> List[SASAResult]:
         complex_sasa = calc_SASA(complex_filename)
         relative_sasa = complex_sasa - (protein_sasa + peptide_sasa)
 
-
+        # Create a new SASAResult instance to store the results for this pdb.
         result = SASAResult(
             pdb_name, protein_sasa, peptide_sasa, complex_sasa, relative_sasa
         )
@@ -128,12 +131,12 @@ def calc_relative_SASA(workdir) -> List[SASAResult]:
 
 
 if __name__ == "__main__":
-    #logger.info("start calculating the relative SASA")
+    logger.info("start calculating the relative SASA")
     workdir = (
-        '/mnt/nas1/lanwei-125/TGFbR2/CF_relax/extracted_files/'
+        "/mnt/nas/yuliu/repos/peptide-deploy/utils_peptide/cyc_pep_protein_complex"
     )
     results = calc_relative_SASA(workdir)
     write_results_to_csv(
-        results, "/mnt/nas1/lanwei-125/TGFbR2/CF_relax/extracted_files/SASA_results.csv"
+        results, "/mnt/nas/yuliu/repos/peptide-deploy/test_outputs/SASA_results.csv"
     )
-    #logger.info("end")
+    logger.info("end")

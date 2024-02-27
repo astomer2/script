@@ -262,7 +262,7 @@ def run_simulation(cuda_device_id ,CMAP ,cmap_path, all_atom):
 
 
 
-def analysis(work_path, reference,target):
+def analysis(work_path, reference,target,CMAP):
     """
     Generates a function comment for the given function body in a markdown code block with the correct language syntax.
 
@@ -315,27 +315,30 @@ def analysis(work_path, reference,target):
 
 def simulation(
         work_path: str , parmter_file: str ,cmap_path: str , cuda_device_id: int, 
-        induced_hydrogen: bool, all_atom: bool, CMAP: bool, pepcyc: bool, pepcys: bool, GC: bool
+        induced_hydrogen: bool, all_atom: bool, CMAP: bool, pepcyc: bool, pepcys: bool, GC: bool,
+        analysis_only: bool
         ):
 
     os.chdir(work_path)
     peptide_structure = f'{work_path}/peptide.pdb'
     protein_structure = f'{work_path}/protein.pdb'
     if os.path.exists(peptide_structure) and os.path.exists(protein_structure):
-        sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, all_atom, pepcyc ,pepcys, GC)
-        take_paramter_flie(parmter_file)
-        run_simulation(cuda_device_id, CMAP, cmap_path, all_atom)
+        if not analysis_only:  
+            sovlate_pdb(peptide_structure, protein_structure, induced_hydrogen, all_atom, pepcyc, pepcys, GC)
+            take_paramter_flie(parmter_file)
+            run_simulation(cuda_device_id, CMAP, cmap_path, all_atom)
         protein_id ,reference = reference_id(protein_structure)
         target = target_id(protein_id, peptide_structure)
-        analysis(work_path, reference, target)
+        analysis(work_path, reference, target,CMAP)
+
 
 
 if __name__ == "__main__":
-    # 设置默认参数
+
     default_cuda_device_id = 0
     default_parmter_file = "/mnt/nas1/software/MD/amber_paramter_files"
     default_cmap_path = "/mnt/nas1/software/MD/CMAP_files"
-    # 定义命令行参数
+
     parser = argparse.ArgumentParser(description="Run amber simulation with specified parameters, if no parameters are specified, default parameters will be used")
     parser.add_argument("-i", "--work_path", required=True, help="Path to the work directory, should have protein.pdb and peptide.pdb, must be required")
     parser.add_argument("-g", "--cuda_device_id", nargs='?', default=default_cuda_device_id, help="CUDA device ID,  default is 0")
@@ -347,25 +350,24 @@ if __name__ == "__main__":
     parser.add_argument("-cyc", "--pepcyc", action="store_true",default=False, help="If enable pepcyc, Connect any two amino acids at the beginning and end of a polypeptide so that their free amino and carboxyl groups form a peptide bond, must close CMAP, default is False")
     parser.add_argument("-cys", "--pepcys", action="store_true",default=False, help="If enable pepcys, Connect any two cysteines in a polypeptide whose distance is greater than 2.05 Angstroms to form a disulfide bond between their sulfhydryl groups, support CMAP, default is False")
     parser.add_argument("-GC", "--Coarse_graining", action="store_true",default=False,  help="If enable coarse graining, use the coarse graining algorithm to generate the coarse-grained protein, default is False, required pdb2pqr and cgconv perl script ")
-# 解析命令行参数
+    parser.add_argument("-ana", "--analysis_only", action="store_true",default=False,  help="If enable analysis, only use the cpptraj to analyze the MD result, default is False")
     args = parser.parse_args()
 
     work_path = args.work_path
     cuda_device_id = args.cuda_device_id
     parmter_file = args.parmter_file
-    cmap_path = args.CMAP_path  # 修改为 CMAP_path，与命令行参数一致
+    cmap_path = args.CMAP_path 
     induced_hydrogen = args.induced_hydrogen
     all_atom = args.all_atom_force_field
     CMAP = args.CMAP
     pepcyc = args.pepcyc
     pepcys = args.pepcys
     GC = args.Coarse_graining
+    analysis_only = args.analysis_only
 
-    # 增加额外的判断
     if pepcyc and CMAP:
         raise ValueError("Error: When pepcyc is True, CMAP must be False.")
     if CMAP and not pepcyc:
-        # 可以使用默认路径参数，也可以手动传入-c的参数
         cmap_path = args.CMAP_path
 
     if GC and all_atom:
@@ -384,4 +386,4 @@ if __name__ == "__main__":
     conc = 0.15
 
     # 调用 simulation 函数
-    simulation(work_path, parmter_file, cmap_path, cuda_device_id, induced_hydrogen, all_atom, CMAP, pepcyc, pepcys, GC)
+    simulation(work_path, parmter_file, cmap_path, cuda_device_id, induced_hydrogen, all_atom, CMAP, pepcyc, pepcys, GC, analysis_only)

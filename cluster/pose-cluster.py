@@ -15,6 +15,7 @@ import math
 import multiprocessing as mp
 import matplotlib.pyplot as plt
 from shutil import copyfile
+import argparse
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -78,7 +79,7 @@ def read_peptide(peptide_pdb_dir):
 
 
 # 计算多肽和蛋白的接触图谱(权重图谱)，截距设为6埃
-def calc_contacts(peptide_idx, peptide_coords, protein_coords, contact_cutoff):
+def calc_contacts(peptide_idx, peptide_coords, protein_coords, contact_cutoff) -> list[int]:
     """
     Calculate the number of contacts between a peptide and a protein.
 
@@ -181,7 +182,7 @@ def cluster_contact_matrix(contact_matrixs,DBCV_score_vs_trials):
         return hdb, score
 
     min_cluster_sizes = list(range(2, 5))
-    min_samples_values = list(range(2, 5))
+    min_samples_values = list(range(1, 5))
     eps_values = [x * 0.1 for x in range(1, 30, 2)]
     cluster_selection_methods = [
         "eom", 
@@ -302,17 +303,19 @@ def extract_random_peptides(HDB_cluster_dict, peptide_number):
     Returns:
         dict: A dictionary mapping labels to lists of randomly selected peptides. The keys represent the labels of the clusters, and the values represent the randomly selected peptides from each cluster.
     """
-    real_cluster = {}
-    for i in range(0,len(HDB_cluster_dict)-1):
-        a= HDB_cluster_dict[i]
-        real_cluster[i] = a  
+    #real_cluster = {}
+    #for i in range(0,len(HDB_cluster_dict)-1):
+    #    a= HDB_cluster_dict[i]
+    #    real_cluster[i] = a  
 
-    total_peptides = sum(len(peptides) for peptides in real_cluster.values())
-    weights = {label: len(peptides) / total_peptides for label, peptides in real_cluster.items()}
+    total_peptides = sum(len(peptides) for peptides in HDB_cluster_dict.values())
+    weights = {label: len(peptides) / total_peptides for label, peptides in HDB_cluster_dict.items()}
+    if peptide_number > total_peptides:
+        peptide_number = total_peptides    
     peptides_to_extract = {label: math.ceil(peptide_number * weight) for label, weight in weights.items()}
 
     selected_peptides = {}
-    for label, peptides in real_cluster.items():
+    for label, peptides in HDB_cluster_dict.items():
         selected_peptides[label] = random.sample(peptides, peptides_to_extract[label])
         
     peptide_number = sum(len(peptides) for peptides in selected_peptides.values())
@@ -358,9 +361,10 @@ def score_cluster(HDB_cluster_dict, peptide_pdb_dir, HPEP, ADCP, peptide_number)
     """
     selected_peptides = {}
     total_peptides = sum(len(peptides) for peptides in HDB_cluster_dict.values())
+    
+    weights = {label: len(peptides) / total_peptides for label, peptides in HDB_cluster_dict.items()}
     if peptide_number > total_peptides:
         peptide_number = total_peptides
-    weights = {label: len(peptides) / total_peptides for label, peptides in HDB_cluster_dict.items()}
     peptides_to_extract = {label: math.ceil(peptide_number * weight) for label, weight in weights.items()}
 
     for label, peptides in HDB_cluster_dict.items():
@@ -451,7 +455,7 @@ def merge_pdb(HDB_cluster_dict, cluster_path):
                 f_out.write("ENDMDL\n\n")    
     logger.info(f"{now_times} Clustered PDB files saved to {cluster_path}")
 
-def main(protein_pdb, peptide_pdb_dir, cluster_path , random_peptides):
+def main(protein_pdb, peptide_pdb_dir, cluster_path, peptide_number, HPEP, ADCP, contact_cutoff):
     """
     Generate a plot and result file for cluster analysis.
 
@@ -491,7 +495,6 @@ def main(protein_pdb, peptide_pdb_dir, cluster_path , random_peptides):
     labels = cluster(best_model, contact_matrixs)
     HDB_cluster_dict = show_cluster(labels, peptide_names, cluster_result)
 
-    # 现在提取出的多肽不包括噪音类，也就是会少一个类
     if HPEP or ADCP:
         select_peptides = score_cluster(HDB_cluster_dict, peptide_pdb_dir, HPEP, ADCP, peptide_number)
     else:
@@ -505,15 +508,11 @@ def main(protein_pdb, peptide_pdb_dir, cluster_path , random_peptides):
 
 
 if __name__ == "__main__":
-    protein_pdb = "/mnt/nas1/lanwei-125/FGF5/dock_prepare/FGF5.pdb"
-    peptide_pdb_dir = "/mnt/nas1/lanwei-125/FGF5/disulfide/HPEP/hpep-result/"
-    cluster_path = "/mnt/nas1/lanwei-125/FGF5/disulfide/HPEP/HPEP_cluster/"
-
-    HPEP = True  # if your structures are from HPEP, set it to True, else set it to False
-    ADCP = False   # if your structures are from ADCP, set it to True, else set it to False
-
-    peptide_number = 70 #set the number of peptides you want，if HPEP and ADCP is False, it will be ramdomly selected 
-    contact_cutoff = 7  # 6 angstroms
-
-    main(protein_pdb, peptide_pdb_dir, cluster_path , peptide_number)
-    print("done")
+    protein_pdb='/mnt/nas1/lanwei-125/MC5R/Sequence/MC5R.pdb'
+    peptide_pdb_dir='/mnt/nas1/lanwei-125/MC5R/dock/HPEP/cpep_sequence_best_pose'
+    cluster_path='/mnt/nas1/lanwei-125/MC5R/dock/HPEP/cpep_sequence_best_pose/cluster'
+    peptide_number=999
+    HPEP=True
+    ADCP=False
+    contact_cutoff=7
+    main(protein_pdb, peptide_pdb_dir, cluster_path , peptide_number, HPEP, ADCP, contact_cutoff)

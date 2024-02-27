@@ -3,7 +3,7 @@ from pdbfixer import PDBFixer
 from pathlib import Path
 from openmm.app import PDBFile
 
-def fixed_pdb_file(pdb_file: Path or str, output_file= None)  -> Path:
+def fixed_pdb_file(input_pdb_file: Path or str, output_pdb_file= None)  -> Path:
     """
     Generate a fixed PDB file from the given PDB file.
 
@@ -15,10 +15,8 @@ def fixed_pdb_file(pdb_file: Path or str, output_file= None)  -> Path:
         Path: The path to the output PDB file.
 
     """
-    pdb_file = Path(pdb_file)
-
-
-    fixer = PDBFixer(filename= str(pdb_file))
+    input_pdb_file = Path(input_pdb_file)
+    fixer = PDBFixer(filename=str(input_pdb_file))
 
     fixer.findMissingResidues()
     fixer.findNonstandardResidues()
@@ -30,12 +28,13 @@ def fixed_pdb_file(pdb_file: Path or str, output_file= None)  -> Path:
     fixer.addMissingAtoms()
     fixer.addMissingHydrogens(7.0)    
     
-    if output_file is not None:
-        PDBFile.writeFile(fixer.topology, fixer.positions, open(output_file, 'w'))
+    if output_pdb_file is not None:
+        PDBFile.writeFile(fixer.topology, fixer.positions, open(output_pdb_file, 'w'))
     else:
-        output_file=pdb_file
-        PDBFile.writeFile(fixer.topology, fixer.positions, open(output_file, 'w'))
-    return output_file
+        output_pdb_file=input_pdb_file
+        PDBFile.writeFile(fixer.topology, fixer.positions, open(output_pdb_file, 'w'))
+    return output_pdb_file
 
 if __name__ == "__main__" :
-    pass
+    input_pdb_file = "/mnt/nas1/lanwei-125/MC5R/dock/hpep-complex/DEQPL/DEQPL.pdb"
+    fixed_pdb_file(input_pdb_file)
