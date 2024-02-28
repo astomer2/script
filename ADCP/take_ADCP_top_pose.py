@@ -149,11 +149,11 @@ def merge_best_pdb():
             f_out.write('ENDMDL\n\n')    
 
 if __name__ == '__main__':
-    path =  '/mnt/nas1/lanwei-125/MC5R/dock/ADCP/CPEP_motif_4/ASIP'
+    path =  '/mnt/nas1/lanwei-125/des3pi/test/adcp-dock/'
     new_chain_id = 'E'
-    out_dir = '/mnt/nas1/lanwei-125/MC5R/dock/ADCP/CPEP_motif_4/best_pose/'
-    output_file = f'{out_dir}/MC5R-dock-pose.pdb'
+    out_dir = '/mnt/nas1/lanwei-125/des3pi/test/adcp-dock/best_pose'
+    #output_file = f'{out_dir}/MC5R-dock-pose.pdb'
     #md_file = '/mnt/nas1/lanwei-125/IL8/v2/'
     min_scores = confirm_best_pose_pdb()
     take_best_pose_pdb(min_scores)
-    #merge_best_pdb()MRAP
+    #merge_best_pdb()

@@ -2,6 +2,7 @@ import os
 from re import T
 import zipfile
 from collections import defaultdict
+from pathlib import Path
 
 def extract_zip_files(zip_folder, extracted_folder_base):
     """解压缩文件： extract_zip_files 函数遍历给定的文件夹 zip_folder 中的所有文件，
@@ -23,9 +24,10 @@ def find_sequences_and_rename(extracted_folder_base, cyclic_folder, pep_chain_id
     选择某个文件作为代表，并将其重命名为该序列的新名称，最后将这些文件移动到 cyclic_folder 文件夹中。"""
     sequences = defaultdict(lambda: (float('inf'), None))
     os.makedirs(cyclic_folder,exist_ok=True)
+
     for root, dirs, files in os.walk(extracted_folder_base):
         for file_name in files:
-            if '_relaxed_rank_' in file_name and file_name.endswith('.pdb'):
+            if 'ranked_' in file_name and file_name.endswith('.pdb'):
                 file_path = os.path.join(root, file_name)
 
                 # Extract SG coordinates
@@ -53,8 +55,8 @@ def find_sequences_and_rename(extracted_folder_base, cyclic_folder, pep_chain_id
 
 if __name__ == "__main__":
     sturcture_zip_path = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/output/'
-    extracted_folder_base = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/MD/pos/'
-    cyclic_folder = '/mnt/nas1/lanwei-125/FGF5/FGF5-pos/new_pos/MD/pos/'
+    extracted_folder_base = '/mnt/nas1/lanwei-125/MC5R/AF_generate/AF-cpep/cpep/'
+    cyclic_folder = '/mnt/nas1/lanwei-125/MC5R/AF_generate/AF-cpep/AF-cpep/'
     pep_chain_id = 'B'
-    extract_zip_files(sturcture_zip_path, extracted_folder_base)
+    #extract_zip_files(sturcture_zip_path, extracted_folder_base)
     find_sequences_and_rename(extracted_folder_base, cyclic_folder, pep_chain_id)

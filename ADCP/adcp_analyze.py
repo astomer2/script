@@ -70,6 +70,6 @@ def write_result(result_path: Path, docking_results: list):
     result_df.to_csv(result_path / "result.csv", index=False)
 
 if __name__ == '__main__':
-    path = Path('/mnt/nas1/lanwei-125/MC5R/dock/ADCP/CPEP_motif_4/POMC/')    
+    path = Path('/mnt/nas1/lanwei-125/des3pi/test/adcp-dock/')    
     docking_results = read_score(path)
     write_result(path, docking_results)
