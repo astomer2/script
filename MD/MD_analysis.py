@@ -240,7 +240,7 @@ def analysis_MD_result(root_dir,ref_contact_data) -> None:
         contact(root_dir, ref_contact_data, contact_rate) #this maybe need ad-hoc modification
 
 if __name__ == '__main__':
-    root_dir ='/mnt/nas1/lanwei-125/MC5R/MD/AFD/'
+    root_dir ='/mnt/nas1/lanwei-125/MC5R/MD/generate_v1/'
     ref_contact_data =''
     analysis_MD_result(root_dir,ref_contact_data)
     

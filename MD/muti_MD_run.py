@@ -148,13 +148,11 @@ def run_muti_MD(subject: str, script_path: str,extra_functions: list):
             gpu_id = gpu_ids.popleft()
             work_path = tasks_queue.popleft()
 
-            # 检查任务是否已完成
             if work_path in finished_tasks:
                 ran_task.append(work_path)
                 logging.info(f"{now_time} {work_path} 已经运行，跳过")
                 continue
 
-            # 运行任务
             run_command(script_path, work_path, extra_functions, gpu_id)
             ran_task.append(work_path)
             finished_tasks[work_path] = True
