@@ -4,7 +4,7 @@ from Bio import SeqIO
 from Bio.PDB import PDBParser, DSSP, Superimposer, PDBIO
 from Bio.SeqUtils import seq1
 from utils_comm.log_util import ic, logger
-
+from typing import Iterable, Union
 
 # https://www.wikidoc.org/index.php/Secondary_structure#The_DSSP_code
 # G = 3-turn helix (310 helix). Min length 3 residues.
@@ -198,7 +198,7 @@ def check_pdb_chain(pdb_file):
             _, UNP_id = record.dbxrefs[0].strip().split(':')
             ic(UNP_id)
 
-def get_sequence_from_chain(PDB_file_path:str or Path,target_chain_id='A') -> str:
+def get_sequence_from_chain(PDB_file_path:Union[Path, str],target_chain_id='A') -> str:
     '''get chain sequence with one letter code'''
     PDB_file_path = Path(PDB_file_path)
     pdbparser = PDBParser()
@@ -207,6 +207,70 @@ def get_sequence_from_chain(PDB_file_path:str or Path,target_chain_id='A') -> st
     query_chain_seq = chains[target_chain_id]
     return query_chain_seq
 
+def get_amino_acid_count(pdb_file):
+    """
+    Function to get the number of amino acids in a PDB file.
+
+    Parameters:
+    pdb_file (str): Path to the PDB file.
+
+    Returns:
+    int: Number of amino acids in the PDB file.
+    """    
+    amino_acid_numbers = set()  
+    with open(pdb_file, 'r') as file:
+        for line in file:
+            if line.startswith('ATOM'):
+                residue_number = int(line[22:26])
+                amino_acid_numbers.add(residue_number)
+
+    return len(amino_acid_numbers)
+
+
+def add_chain_id_to_pdb(input_pdb_file: str, output_pdb_file : str, aa_positions: Union[int,list] = None):
+    """
+    Adds a chain ID to a PDB file based on the positions of the amino acids.
+
+    Args:
+        input_pdb_file (str): Path to the input PDB file.
+        output_pdb_file (str): Path to the output PDB file.
+        aa_positions (Iterable[int]) or (list): Iterable of the positions of the amino acids in the PDB file.
+
+    Returns:
+        None
+
+    Raises:
+        ValueError: If the input PDB file does not exist or if the positions are not in the correct format.
+    """
+
+    with open(input_pdb_file, 'r') as pdb_file:
+        lines = pdb_file.readlines()
+
+    pdb_len = get_amino_acid_count(input_pdb_file)
+    if aa_positions ==None:
+        amino_acid_ranges = (1, pdb_len)
+        chain_ids = ['A']
+    else :
+        positions =list(aa_positions)
+        amino_acid_ranges = [(1, positions[0])] + [(positions[i] + 1, positions[i + 1]) for i in range(len(positions) - 1)] + [(positions[-1] + 1, pdb_len)]
+        chain_ids = [chr(ord('A') + i) for i in range(len(positions)+1)]
+
+    with open(output_pdb_file, 'w') as new_pdb_file:
+        current_chain_id = None
+        for line in lines:
+            if line.startswith('ATOM'):
+                residue_number = int(line[22:26])
+                for i, (start, end) in enumerate(amino_acid_ranges):
+                    if start <= residue_number <= end:
+                        current_chain_id = chain_ids[i]
+                        break
+                new_line = line[:21] + current_chain_id + line[22:]
+                new_pdb_file.write(new_line)
+            else:
+                new_pdb_file.write(line)
+
+
 if __name__ == "__main__":
     file = ''
     get_secondary_structure_from_pdb_file(file)
+
